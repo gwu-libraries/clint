@@ -33,3 +33,9 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# virtual environment
+ENV
+
+# config files
+# ?
