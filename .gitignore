@@ -38,4 +38,4 @@ nosetests.xml
 ENV
 
 # config files
-# ?
+*local_settings.py
