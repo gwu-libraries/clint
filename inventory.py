@@ -12,6 +12,8 @@ class Inventory():
         self.url = url
         self.port = port
         self.baseurl = '%s:%s/api/%s' % (url, port, apiversion)
+        self.auth_header = {
+            'Authorization': 'ApiKey %s:%s' % (self.user, self.apikey)}
 
     def __str__(self):
         return '<Inventory %s>' % self.url
@@ -24,28 +26,27 @@ class Inventory():
 
     def post(self, model, **data):
         url = '%s/%s/' % (self.baseurl, model)
-        data.update({'username': self.user, 'api_key': self.apikey})
-        return requests.post(url, data=json.dumps(data))
+        return requests.post(url, data=json.dumps(data),
+            headers=self.auth_header)
 
     def put(self, model, pk, **data):
         # put changes all fields, use patch for subset changes
         url = '%s/%s/%s' % (self.baseurl, model, pk)
-        data.update({'username': self.user, 'api_key': self.apikey})
-        return requests.put(url, data=json.dumps(data))
+        return requests.put(url, data=json.dumps(data),
+            headers=self.auth_header)
 
     def patch(self, model, pk, **data):
-        url = '%s/%s/%s' % (self.baseurl, model, pk)
-        data.update({'username': self.user, 'api_key': self.apikey})
-        return requests.patch(url, data=json.dumps(data))
+        url = '%s/%s/%s/' % (self.baseurl, model, pk)
+        return requests.patch(url, data=json.dumps(data),
+            headers=self.auth_header)
 
     def delete(self, model, pk):
         url = '%s/%s/%s' % (self.baseurl, model, pk)
-        data = {'username': self.user, 'api_key': self.apikey}
-        return requests.delete(url, data=json.dumps(data))        
+        return requests.delete(url, headers=self.auth_header)
 
 
 class Machine():
-    
+
     def __init__(self, name='', url=''):
         self.name = name
         self.url = url
@@ -131,4 +132,3 @@ class BagAction():
 
     def __str__(self):
         return '<BagAction %s>' % self.action
-

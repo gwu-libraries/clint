@@ -1,7 +1,6 @@
 import unittest
 
 from inventory import Inventory
-import settings
 from settings import inventory_sandbox as sandbox
 
 
@@ -38,14 +37,21 @@ class TestInventoryClass(unittest.TestCase):
         j4 = res4.json()
         self.assertEqual(j4['item'], '/api/v1/item/12345/i000000031/')
 
-    def testpost(self):
+    def testpostanddelete(self):
         # create a collection
         cdata = {"id": "12345/100000000001", "name": "Test Collection 1",
             "description": "A test collection", "manager": "Joshua Gomez",
             "created": "2013-04-25 14:19:01.351058"}
-        response = self.inv.post('collection', **cdata)
-        print response.status_code, response.reason
-        self.assertEqual(response.status_code, 200)
+        response1 = self.inv.post('collection', **cdata)
+        self.assertEqual(response1.status_code, 201)
+        # now delete it
+        response2 = self.inv.delete('collection', '12345/100000000001')
+        self.assertEqual(response2.status_code, 204)
+
+    def testpatch(self):
+        cdata = {'description': 'Patch Worked!'}
+        response = self.inv.patch('collection', '12345/c00000000001', **cdata)
+        self.assertEqual(response.status_code, 202)
 
 if __name__ == '__main__':
     unittest.main()
