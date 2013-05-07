@@ -48,6 +48,16 @@ class TestInventoryClass(unittest.TestCase):
         response2 = self.inv.delete('collection', '12345/100000000001')
         self.assertEqual(response2.status_code, 204)
 
+    def testbadpost(self):
+        # create a collection with no name or create date
+        cdata = {"id": "12345/c10000000001", "manager": "Joshua Gomez",
+            "description": "A test collection"}
+        response1 = self.inv.post('collection', **cdata)
+        self.assertEqual(response1.status_code, 400)
+        # now delete it
+        #response2 = self.inv.delete('collection', '12345/100000000001')
+        #self.assertEqual(response2.status_code, 204)
+
     def testpatch(self):
         cdata = {'description': 'Patch Worked!'}
         response = self.inv.patch('collection', '12345/c00000000001', **cdata)
