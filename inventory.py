@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 import requests
 
@@ -11,25 +10,31 @@ auth_header = {'Authorization': 'ApiKey %s:%s' % (creds['user'],
 
 # Base HTTP methods
 
+
 def _get(model, pk):
     params = {'format': 'json', 'username': creds['user'],
         'api_key': creds['apikey']}
     url = '%s/%s/%s/' % (baseurl, model, pk)
     return requests.get(url, params=params, headers=auth_header)
 
+
 def _post(model, **data):
     # POST is for new items, not changes. Use PUT or PATCH for changes
     url = '%s/%s/' % (baseurl, model)
     return requests.post(url, data=json.dumps(data), headers=auth_header)
 
+
 def _put(model, pk, **data):
-    # PUT changes all fields, use PATCH for subset changes
+    # PUT changes all fields (overwrites with blank if you don't set a value)
+    # use PATCH to change one or two fields without setting them all
     url = '%s/%s/%s/' % (baseurl, model, pk)
     return requests.put(url, data=json.dumps(data), headers=auth_header)
+
 
 def _patch(model, pk, **data):
     url = '%s/%s/%s/' % (baseurl, model, pk)
     return requests.patch(url, data=json.dumps(data), headers=auth_header)
+
 
 def _delete(model, pk):
     url = '%s/%s/%s/' % (baseurl, model, pk)
@@ -37,7 +42,7 @@ def _delete(model, pk):
 
 
 # API methods
-
+'''
 def getobject(model, pk):
     response = _get(model, pk)
     if response.status_code == 200:
@@ -46,6 +51,7 @@ def getobject(model, pk):
         raise Inventory404
     else:
         raise InventoryError
+'''
 
 
 class Inventory404(Exception):
@@ -56,27 +62,99 @@ class InventoryError(Exception):
     pass
 
 
-class Machine():
+class Machine(object):
 
-    def __init__(self, name='', url=''):
-        self.name = name
-        self.url = url
+    __readonly = ['id']
+    __readwrite = ['name', 'url']
+
+    def __init__(self, id=None, name='', url=''):
+        self.__loaded = False
+        self.__id = id
+        self.__name = name
+        self.__url = url
 
     def __str__(self):
-        return '<Machine %s>' % self.name
+        return '<Machine %s>' % (self.__id)
+
+    def __setattr__(self, key, value):
+        if key in self.__class__.__readonly:
+            raise AttributeError("The attribute %s is read-only." % key)
+        else:
+            super(Machine, self).__setattr__(key, value)
+
+    def __getattr__(self, key):
+        if self.__id and not self.__loaded:
+            self._load_properties()
+        if key in self.__class__.__readonly:
+            return super(Machine, self).__getattribute__("_%s__%s" %
+                (self.__class__.__name__, key))
+        else:
+            return super(Machine, self).__getattribute__(key)
+
+    def _load_properties(self):
+        response = _get('machine', self.__id)
+        if response.status_code == 200:
+            data = response.json()
+            self.name = data['name']
+            self.url = data['url']
+            self.__loaded = True
+        elif response.status_code == 404:
+            raise Inventory404()
+        else:
+            raise InventoryError()
+
+    def writeables(self):
+        return self.__class__.__readwrite
+
+    def save(self):
+        """
+        Store item in Inventory
+        Do a POST if new (no ID) and PUT otherwise
+        """
+        data = {}
+        if not self.__loaded and not self.__id:
+            for field in self.__class__.__readwrite:
+                data[field] = getattr(self, field)
+            response = _post('machine', **data)
+            if response.status_code == 201:
+                url = response.headers['Location']
+                self.__id = url.rstrip('/').split('/')[-1]
+                return self
+            else:
+                raise InventoryError()
+        elif self.__loaded:
+            for field in vars(self):
+                data[field] = getattr(self, field)
+            response = _put('machine', data)
+            if response.status_code == 204:
+                return self
+            else:
+                raise InventoryError()
+        else:
+            return self
+
+    def to_string(self):
+        if not self.__loaded:
+            self._load_properties()
+        lines = ['--Machine--']
+        lines.append('%s: %s' % ('id'.rjust(4), self.__id))
+        lines.append('%s: %s' % ('name'.rjust(4), self.__name))
+        lines.append('%s: %s' % ('url'.rjust(4), self.__url))
+        return '\n'.join(lines)
 
 
 class Collection(object):
 
-    __readonly = ['id', 'created', 'stats']
+    __readonly = ['id', 'created', 'stats', 'resource_uri']
+    __readwrite = ['name', 'description', 'manager']
 
-    def __init__(self, id, name='', description='', manager='',
+    def __init__(self, id=None, name='', description='', manager='',
         created=None, stats=None):
         self.__loaded = False
         self.__id = id
-        self.__name = name
-        self.__description = description
-        self.__manager = manager
+        self.name = name
+        self.description = description
+        self.manager = manager
         self.__created = created
         self.__stats = stats
 
@@ -102,50 +180,86 @@ class Collection(object):
         response = _get('collection', self.__id)
         if response.status_code == 200:
             data = response.json()
-            self.__name = data['name']
-            self.__description = data['description']
-            self.__manager = data['manager']
+            self.name = data['name']
+            self.description = data['description']
+            self.manager = data['manager']
             self.__created = data['created']
             self.__stats = data['stats']
+            self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404()
         else:
+            print response.status_code
             raise InventoryError()
+
+    def writeopts(self):
+        return [(attr, None) for attr in self.__class__.__readwrite]
+
+    def save(self):
+        """
+        Store item in Inventory
+        Do a POST if new (no ID) and PUT otherwise
+        """
+        data = {}
+        if not self.__loaded and not self.__id:
+            for field in self.__class__.__readwrite:
+                data[field] = getattr(self, field)
+            response = _post('collection', **data)
+            if response.status_code == 201:
+                url = response.headers['Location']
+                self.__id = '/'.join(url.rstrip('/').split('/')[-2:])
+                return self
+            else:
+                raise InventoryError(response.text)
+        elif self.__loaded:
+            for field in vars(self):
+                data[field] = getattr(self, field)
+            response = _put('collection', data)
+            if response.status_code == 204:
+                return self
+            else:
+                raise InventoryError(response)
+        else:
+            return self
 
     def to_string(self):
         if not self.__loaded:
             self._load_properties()
-        lines = ['--Collection--'.center(24)]
-        lines.append('%s: %s' % ('id'.rjust(11), self.__id))
-        lines.append('%s: %s' % ('name'.rjust(11), self.__name))
-        lines.append('%s: %s' % ('created'.rjust(11), self.__created))
-        lines.append('%s: %s' % ('manager'.rjust(11), self.__manager))
-        lines.append('%s: %s' % ('description'.rjust(11), self.__description))
-        lines.append('%s: %s' % ('stats'.rjust(11), self.__stats))
+        lines = ['--Collection--'.rjust(19)]
+        lines.append('%s: %s' % ('id'.rjust(11), self.id))
+        lines.append('%s: %s' % ('name'.rjust(11), self.name))
+        lines.append('%s: %s' % ('created'.rjust(11), self.created))
+        lines.append('%s: %s' % ('manager'.rjust(11), self.manager))
+        lines.append('%s: %s' % ('description'.rjust(11), self.description))
+        lines.append('%s: %s' % ('stats'.rjust(11), self.stats))
         return '\n'.join(lines)
 
 
 class Project(object):
 
-    __readonly = ['id', 'created', 'stats']
+    __readonly = ['id', 'created', 'stats', 'resource_uri']
+    __readwrite = ['name', 'manager', 'collection', 'start_date', 'end_date']
+    __relations = ['collection']
 
-    def __init__(self, id='', name='', manager='', collection='',
-        start_date='', end_date='', created=None, stats=None):
+    def __init__(self, id=None, name='', manager='', created=None, stats=None,
+        collection=None, start_date='', end_date=''):
         self.__loaded = False
         self.__id = id
-        self.__name = name
+        self.name = name
         self.__created = created
-        self.__manager = manager
-        self.__collection = collection # FIX!
-        self.__start_date = start_date
-        self.__end_date = end_date
+        self.manager = manager
+        self.start_date = start_date
+        self.end_date = end_date
         self.__stats = stats
+        self.collection = collection
 
     def __str__(self):
-        return '<Project %s>' % self.__id
+        return '<Project %s>' % self.id
 
     def __setattr__(self, key, value):
+        if key in self.__relations and isinstance(value, str):
+            value = globals()[key.capitalize()](id=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
         else:
@@ -166,55 +280,95 @@ class Project(object):
             data = response.json()
             collection_id = '/'.join(
                 data['collection'].rstrip('/').split('/')[-2:])
-            self.__name = data['name']
-            self.__manager = data['manager']
+            self.name = data['name']
+            self.manager = data['manager']
             self.__created = data['created']
-            self.__collection = Collection(collection_id)
-            self.__start_date = data['start_date']
-            self.__end_date = data['end_date']
+            self.collection = collection_id
+            self.start_date = data['start_date']
+            self.end_date = data['end_date']
             self.__stats = data['stats']
+            self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404()
         else:
             raise InventoryError()
 
+    def writeopts(self):
+        return [(attr, None) for attr in self.__class__.__readwrite]
+
+    def save(self):
+        """
+        Store item in Inventory
+        Do a POST if new (no ID) and PUT otherwise
+        """
+        data = {}
+        if not self.__loaded and not self.__id:
+            for field in self.__class__.__readwrite:
+                if field in self.__relations:
+                    data[field] = getattr(self, field).resource_uri
+                else:
+                    data[field] = getattr(self, field)
+            response = _post('project', **data)
+            if response.status_code == 201:
+                url = response.headers['Location']
+                self.__id = '/'.join(url.rstrip('/').split('/')[-2:])
+                return self
+            else:
+                raise InventoryError(response.text)
+        elif self.__loaded:
+            for field in vars(self):
+                data[field] = getattr(self, field)
+            response = _put('project', **data)
+            if response.status_code == 204:
+                return self
+            else:
+                raise InventoryError(response)
+        else:
+            return self
+
     def to_string(self):
         if not self.__loaded:
             self._load_properties()
-        lines = ['--Project--'.center(24)]
-        lines.append('%s: %s' % ('id'.rjust(11), self.__id))
-        lines.append('%s: %s' % ('name'.rjust(11), self.__name))
-        lines.append('%s: %s' % ('created'.rjust(11), self.__created))
-        lines.append('%s: %s' % ('manager'.rjust(11), self.__manager))
-        lines.append('%s: %s' % ('collection'.rjust(11), self.__collection))
-        lines.append('%s: %s' % ('start date'.rjust(11), self.__start_date))
-        lines.append('%s: %s' % ('end date'.rjust(11), self.__end_date))
-        lines.append('%s: %s' % ('stats'.rjust(11), self.__stats))
+        lines = ['--Project--'.rjust(17)]
+        lines.append('%s: %s' % ('id'.rjust(10), self.__id))
+        lines.append('%s: %s' % ('name'.rjust(10), self.name))
+        lines.append('%s: %s' % ('created'.rjust(10), self.__created))
+        lines.append('%s: %s' % ('manager'.rjust(10), self.manager))
+        lines.append('%s: %s' % ('collection'.rjust(10), self.collection))
+        lines.append('%s: %s' % ('start date'.rjust(10), self.start_date))
+        lines.append('%s: %s' % ('end date'.rjust(10), self.end_date))
+        lines.append('%s: %s' % ('stats'.rjust(10), self.__stats))
         return '\n'.join(lines)
 
 
 class Item(object):
 
-    __readonly = ['id', 'created', ]
+    __readonly = ['id', 'created', 'stats', 'resource_uri']
+    __readwrite = ['title', 'local_id', 'notes', 'project', 'collection',
+        'original_item_type']
+    __relations = ['collection', 'project']
+    __types = ['', 'book', 'microfilm', 'audio', 'video', 'mixed', 'other']
 
-    def __init__(self, id='', title='', local_id='', collection='', project='',
-        original_item_type='', notes='', created=None, stats=None):
+    def __init__(self, id=None, title='', local_id='', notes='', stats=None,
+        project=None, original_item_type='', created=None, collection=None):
         self.__loaded = False
         self.__id = id
-        self.__title = title
-        self.__local_id = local_id
-        self.__collection = collection
-        self.__project = project
+        self.title = title
+        self.local_id = local_id
         self.__created = created
-        self.__original_item_type = original_item_type
-        self.__notes = notes
+        self.original_item_type = original_item_type
+        self.notes = notes
         self.__stats = stats
+        self.collection = collection
+        self.project = project
 
     def __str__(self):
         return '<Item %s>' % self.__id
 
     def __setattr__(self, key, value):
+        if key in self.__relations and isinstance(value, str):
+            value = globals()[key.capitalize()](id=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
         else:
@@ -237,13 +391,129 @@ class Item(object):
                 data['collection'].rstrip('/').split('/')[-2:])
             project_id = '/'.join(
                 data['project'].rstrip('/').split('/')[-2:])
-            self.__title = data['title']
-            self.__local_id = data['local_id']
+            self.title = data['title']
+            self.local_id = data['local_id']
             self.__created = data['created']
-            self.__collection = Collection(collection_id)
-            self.__project = Project(project_id)
-            self.__original_item_type = data['original_item_type']
+            self.collection = collection_id
+            self.project = project_id
+            self.original_item_type = data['original_item_type']
             self.__stats = data['stats']
+            self.__resource_uri = data['resource_uri']
+            self.__loaded = True
+        elif response.status_code == 404:
+            raise Inventory404()
+        else:
+            raise InventoryError()
+
+    def writeopts(self):
+        output = []
+        for attr in self.__class__.__readwrite:
+            if attr == 'original_item_type':
+                opts = [(i, self.__types[i]) for i in range(1, len(self.__types))]
+            else:
+                opts = None
+            output.append((attr, opts))
+        return output
+
+    def save(self):
+        """
+        Store item in Inventory
+        Do a POST if new (no ID) and PUT otherwise
+        """
+        data = {}
+        if not self.__loaded and not self.__id:
+            for field in self.__class__.__readwrite:
+                if field in self.__relations:
+                    data[field] = getattr(self, field).resource_uri
+                else:
+                    data[field] = getattr(self, field)
+            response = _post('item', **data)
+            if response.status_code == 201:
+                url = response.headers['Location']
+                self.__id = '/'.join(url.rstrip('/').split('/')[-2:])
+                return self
+            else:
+                raise InventoryError(response.text)
+        elif self.__loaded:
+            for field in vars(self):
+                data[field] = getattr(self, field)
+            response = _put('item', **data)
+            if response.status_code == 204:
+                return self
+            else:
+                raise InventoryError(response)
+        else:
+            return self
+
+    def to_string(self):
+        if not self.__loaded:
+            self._load_properties()
+        lines = ['--Item--'.rjust(19)]
+        lines.append('%s: %s' % ('id'.rjust(14), self.id))
+        lines.append('%s: %s' % ('title'.rjust(14), self.title))
+        lines.append('%s: %s' % ('local_id'.rjust(14), self.local_id))
+        lines.append('%s: %s' % ('created'.rjust(14), self.created))
+        lines.append('%s: %s' % ('collection'.rjust(14), self.collection))
+        lines.append('%s: %s' % ('project'.rjust(14), self.project))
+        lines.append('%s: %s' % ('orig item type'.rjust(14),
+            self.__class__.__types[int(self.original_item_type)]))
+        lines.append('%s: %s' % ('stats'.rjust(14), self.stats))
+        return '\n'.join(lines)
+
+
+class Bag(object):
+
+    __readonly = ['bagname', 'created']
+    __types = ['', 'Access', 'Preservation', 'Export']
+
+    def __init__(self, bagname, created=None, item=None, item_id='',
+        machine=None, machine_id='', path='', bag_type='', payload=''):
+        self.__loaded = False
+        self.__bagname = bagname
+        self.__created = created
+        self.__bag_type = bag_type
+        self.__path = path
+        self.__payload = payload
+        if item_id:
+            self.__item = Item(item_id)
+        else:
+            self.__item = item
+        if machine_id:
+            self.__machine = Machine(machine_id)
+        else:
+            self.__machine = machine
+
+    def __str__(self):
+        return '<Bag %s>' % self.__id
+
+    def __setattr__(self, key, value):
+        if key in self.__class__.__readonly:
+            raise AttributeError("The attribute %s is read-only." % key)
+        else:
+            super(Bag, self).__setattr__(key, value)
+
+    def __getattr__(self, key):
+        if not self.__loaded:
+            self._load_properties()
+        if key in self.__class__.__readonly:
+            return super(Bag, self).__getattribute__("_%s__%s" %
+                (self.__class__.__name__, key))
+        else:
+            return super(Bag, self).__getattribute__(key)
+
+    def _load_properties(self):
+        response = _get('bag', self.__bagname)
+        if response.status_code == 200:
+            data = response.json()
+            item_id = '/'.join(data['item'].rstrip('/').split('/')[-2:])
+            machine_id = '/'.join(data['machine'].rstrip('/').split('/')[-1:])
+            self.__bagname = data['bagname']
+            self.__created = data['created']
+            self.__bag_type = data['bag_type']
+            self.__item = Item(item_id)
+            self.__machine = Machine(machine_id)
+            self.__path = data['path']
+            self.__payload = data['payload']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404()
@@ -253,35 +523,19 @@ class Item(object):
     def to_string(self):
         if not self.__loaded:
             self._load_properties()
-        lines = ['--Item--'.center(24)]
-        lines.append('%s: %s' % ('id'.rjust(11), self.id))
-        lines.append('%s: %s' % ('title'.rjust(11), self.__title))
-        lines.append('%s: %s' % ('local_id'.rjust(11), self.__local_id))
-        lines.append('%s: %s' % ('created'.rjust(11), self.__created))
-        lines.append('%s: %s' % ('collection'.rjust(11), self.__collection))
-        lines.append('%s: %s' % ('project'.rjust(11), self.__project))
-        lines.append('%s: %s' % ('orig item type'.rjust(11),
-            self.__original_item_type))
-        lines.append('%s: %s' % ('stats'.rjust(11), self.__stats))
+        lines = ['--Bag--'.rjust(12)]
+        lines.append('%s: %s' % ('bagname'.rjust(8), self.__bagname))
+        lines.append('%s: %s' % ('bag type'.rjust(8),
+            self.__class__.__types[int(self.__bag_type)]))
+        lines.append('%s: %s' % ('created'.rjust(8), self.__created))
+        lines.append('%s: %s' % ('item'.rjust(8), self.__item))
+        lines.append('%s: %s' % ('machine'.rjust(8), self.__machine))
+        lines.append('%s: %s' % ('path'.rjust(8), self.__path))
+        #lines.append('%s: %s' % ('payload'.rjust(11), self.__payload))
         return '\n'.join(lines)
 
 
-class Bag():
-
-    def __init__(self, bagname='', created='', item='', machine='', path='',
-        bag_type='', payload=''):
-        self.bagname = bagname
-        self.created = created
-        self.item = item
-        self.machine = machine
-        self.path = path
-        self.payload = payload
-
-    def __str__(self):
-        return '<Bag %s>' % self.bagname
-
-
-class BagAction():
+class BagAction(object):
 
     def __init__(self, bag='', timestamp='', action='', note=''):
         self.bag = bag
