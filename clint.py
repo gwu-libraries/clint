@@ -12,9 +12,10 @@ List of potential clint commands
 Interacting with Inventory
 --------------------------
 show collection/item/bag <id>
-add collection/item/bag [<id>]
+add collection/item/bag
 edit collection/item/bag <id>
 delete collection/item/bag <id>
+list collections/items/bags/files in collection/item/bag <id>
 
 Managing Bags
 -------------
