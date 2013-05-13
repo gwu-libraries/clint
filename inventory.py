@@ -10,7 +10,6 @@ auth_header = {'Authorization': 'ApiKey %s:%s' % (creds['user'],
 
 # Base HTTP methods
 
-
 def _get(model, pk):
     params = {'format': 'json', 'username': creds['user'],
         'api_key': creds['apikey']}
@@ -64,7 +63,7 @@ class InventoryError(Exception):
 
 class Machine(object):
 
-    __readonly = ['id']
+    __readonly = ['id', 'resource_uri']
     __readwrite = ['name', 'url']
 
     def __init__(self, id=None, name='', url=''):
@@ -97,6 +96,7 @@ class Machine(object):
             data = response.json()
             self.name = data['name']
             self.url = data['url']
+            self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404()
@@ -348,7 +348,12 @@ class Item(object):
     __readwrite = ['title', 'local_id', 'notes', 'project', 'collection',
         'original_item_type']
     __relations = ['collection', 'project']
-    __types = ['', 'book', 'microfilm', 'audio', 'video', 'mixed', 'other']
+    #__types = ['', 'book', 'microfilm', 'audio', 'video', 'mixed', 'other']
+    __options = {
+        'original_item_type': 
+            [('1', 'book'), ('2', 'microfilm'), ('3', 'audio'),
+            ('4', 'video'), ('5', 'mixed'), ('6', 'other')]
+        }
 
     def __init__(self, id=None, title='', local_id='', notes='', stats=None,
         project=None, original_item_type='', created=None, collection=None):
@@ -404,16 +409,35 @@ class Item(object):
             raise Inventory404()
         else:
             raise InventoryError()
-
+    
     def writeopts(self):
         output = []
         for attr in self.__class__.__readwrite:
-            if attr == 'original_item_type':
-                opts = [(i, self.__types[i]) for i in range(1, len(self.__types))]
+            if attr in self.__options.keys():
+                opts = self.options(attr)
             else:
                 opts = None
             output.append((attr, opts))
         return output
+    
+    def options(self, field=None, key=None, value=None):
+        # if not arguments sent, output entire dictionary
+        if field is None and key is None and value is None:
+            return self.__options
+        elif field is not None:
+            # if field set w/o key or value to fine, give option tuples list
+            if key is None and value is None:
+                return self.__options[field]
+            # if given field and key, return value of that option
+            elif key is not None:
+                for tup in self.__options[field]:
+                    if tup[0] == key:
+                        return tup[1]
+            # if given field and value, give option key
+            elif value is not None:
+                for tup in self.__options[field]:
+                    if tup[1] == value:
+                        return tup[0]
 
     def save(self):
         """
@@ -456,37 +480,41 @@ class Item(object):
         lines.append('%s: %s' % ('collection'.rjust(14), self.collection))
         lines.append('%s: %s' % ('project'.rjust(14), self.project))
         lines.append('%s: %s' % ('orig item type'.rjust(14),
-            self.__class__.__types[int(self.original_item_type)]))
+            self.options('original_item_type', self.original_item_type)))
         lines.append('%s: %s' % ('stats'.rjust(14), self.stats))
         return '\n'.join(lines)
 
 
 class Bag(object):
 
-    __readonly = ['bagname', 'created']
-    __types = ['', 'Access', 'Preservation', 'Export']
+    __readonly = ['resource_uri']
+    # bagname is readwrite for now because inventory does not autoassign names
+    # change this once inventory code has been changed
+    __readwrite = ['bagname', 'bag_type', 'path', 'payload', 'machine',
+        'item', 'created', ]
+    __relations = ['machine', 'item']
+    #__types = ['', 'Access', 'Preservation', 'Export']
+    __options = {
+        'bag_type': [('1', 'Access'), ('2', 'Preservation'), ('3', 'Export')]
+        }
 
-    def __init__(self, bagname, created=None, item=None, item_id='',
-        machine=None, machine_id='', path='', bag_type='', payload=''):
+    def __init__(self, bagname=None, created=None, item=None, machine=None,
+        path='', bag_type='', payload=''):
         self.__loaded = False
-        self.__bagname = bagname
-        self.__created = created
-        self.__bag_type = bag_type
-        self.__path = path
-        self.__payload = payload
-        if item_id:
-            self.__item = Item(item_id)
-        else:
-            self.__item = item
-        if machine_id:
-            self.__machine = Machine(machine_id)
-        else:
-            self.__machine = machine
+        self.bagname = bagname
+        self.created = created
+        self.bag_type = bag_type
+        self.path = path
+        self.payload = payload
+        self.machine = machine
+        self.item = item
 
     def __str__(self):
         return '<Bag %s>' % self.__id
 
     def __setattr__(self, key, value):
+        if key in self.__relations and isinstance(value, str):
+            value = globals()[key.capitalize()](id=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
         else:
@@ -502,35 +530,95 @@ class Bag(object):
             return super(Bag, self).__getattribute__(key)
 
     def _load_properties(self):
-        response = _get('bag', self.__bagname)
+        response = _get('bag', self.bagname)
         if response.status_code == 200:
             data = response.json()
             item_id = '/'.join(data['item'].rstrip('/').split('/')[-2:])
             machine_id = '/'.join(data['machine'].rstrip('/').split('/')[-1:])
-            self.__bagname = data['bagname']
-            self.__created = data['created']
-            self.__bag_type = data['bag_type']
-            self.__item = Item(item_id)
-            self.__machine = Machine(machine_id)
-            self.__path = data['path']
-            self.__payload = data['payload']
+            self.bagname = data['bagname']
+            self.created = data['created']
+            self.bag_type = data['bag_type']
+            self.item = Item(item_id)
+            self.machine = Machine(machine_id)
+            self.path = data['path']
+            self.payload = data['payload']
+            self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404()
         else:
             raise InventoryError()
 
+    def save(self):
+        """
+        Store bag in Inventory
+        Do a POST if new (no ID) and PUT otherwise
+        """
+        data = {}
+        if not self.__loaded:
+            for field in self.__class__.__readwrite:
+                if field in self.__relations:
+                    data[field] = getattr(self, field).resource_uri
+                else:
+                    data[field] = getattr(self, field)
+            response = _post('bag', **data)
+            if response.status_code == 201:
+                url = response.headers['Location']
+                self.__id = '/'.join(url.rstrip('/').split('/')[-2:])
+                return self
+            else:
+                raise InventoryError(response.text)
+        elif self.__loaded:
+            for field in vars(self):
+                data[field] = getattr(self, field)
+            response = _put('bag', **data)
+            if response.status_code == 204:
+                return self
+            else:
+                raise InventoryError(response)
+        else:
+            return self
+
+    def writeopts(self):
+        output = []
+        for attr in self.__class__.__readwrite:
+            if attr in self.__options.keys():
+                opts = self.options(attr)
+            else:
+                opts = None
+            output.append((attr, opts))
+        return output
+
+    def options(self, field=None, key=None, value=None):
+        # if not arguments sent, output entire dictionary
+        if field is None and key is None and value is None:
+            return self.__options
+        elif field is not None:
+            # if field set w/o key or value to fine, give option tuples list
+            if key is None and value is None:
+                return self.__options[field]
+            # if given field and key, return value of that option
+            elif key is not None:
+                for tup in self.__options[field]:
+                    if tup[0] == key:
+                        return tup[1]
+            # if given field and value, give option key
+            elif value is not None:
+                for tup in self.__options[field]:
+                    if tup[1] == value:
+                        return tup[0]
+
     def to_string(self):
         if not self.__loaded:
             self._load_properties()
         lines = ['--Bag--'.rjust(12)]
-        lines.append('%s: %s' % ('bagname'.rjust(8), self.__bagname))
+        lines.append('%s: %s' % ('bagname'.rjust(8), self.bagname))
         lines.append('%s: %s' % ('bag type'.rjust(8),
-            self.__class__.__types[int(self.__bag_type)]))
-        lines.append('%s: %s' % ('created'.rjust(8), self.__created))
-        lines.append('%s: %s' % ('item'.rjust(8), self.__item))
-        lines.append('%s: %s' % ('machine'.rjust(8), self.__machine))
-        lines.append('%s: %s' % ('path'.rjust(8), self.__path))
+            self.options('bag_type', self.bag_type)))
+        lines.append('%s: %s' % ('created'.rjust(8), self.created))
+        lines.append('%s: %s' % ('item'.rjust(8), self.item))
+        lines.append('%s: %s' % ('machine'.rjust(8), self.machine))
+        lines.append('%s: %s' % ('path'.rjust(8), self.path))
         #lines.append('%s: %s' % ('payload'.rjust(11), self.__payload))
         return '\n'.join(lines)
 
