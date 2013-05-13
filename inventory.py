@@ -125,7 +125,7 @@ class Machine(object):
         elif self.__loaded:
             for field in vars(self):
                 data[field] = getattr(self, field)
-            response = _put('machine', data)
+            response = _put('machine', self.id, **data)
             if response.status_code == 204:
                 return self
             else:
@@ -215,7 +215,7 @@ class Collection(object):
         elif self.__loaded:
             for field in vars(self):
                 data[field] = getattr(self, field)
-            response = _put('collection', data)
+            response = _put('collection', self.id, **data)
             if response.status_code == 204:
                 return self
             else:
@@ -318,8 +318,11 @@ class Project(object):
                 raise InventoryError(response.text)
         elif self.__loaded:
             for field in vars(self):
-                data[field] = getattr(self, field)
-            response = _put('project', **data)
+                if field in self.__relations:
+                    data[field] = getattr(self, field).resource_uri
+                else:
+                    data[field] = getattr(self, field)
+            response = _put('project', self.id, **data)
             if response.status_code == 204:
                 return self
             else:
@@ -348,7 +351,6 @@ class Item(object):
     __readwrite = ['title', 'local_id', 'notes', 'project', 'collection',
         'original_item_type']
     __relations = ['collection', 'project']
-    #__types = ['', 'book', 'microfilm', 'audio', 'video', 'mixed', 'other']
     __options = {
         'original_item_type': 
             [('1', 'book'), ('2', 'microfilm'), ('3', 'audio'),
@@ -460,8 +462,11 @@ class Item(object):
                 raise InventoryError(response.text)
         elif self.__loaded:
             for field in vars(self):
-                data[field] = getattr(self, field)
-            response = _put('item', **data)
+                if field in self.__relations:
+                    data[field] = getattr(self, field).resource_uri
+                else:
+                    data[field] = getattr(self, field)
+            response = _put('item', self.id, **data)
             if response.status_code == 204:
                 return self
             else:
@@ -481,6 +486,7 @@ class Item(object):
         lines.append('%s: %s' % ('project'.rjust(14), self.project))
         lines.append('%s: %s' % ('orig item type'.rjust(14),
             self.options('original_item_type', self.original_item_type)))
+        lines.append('%s: %s' % ('notes'.rjust(14), self.notes))
         lines.append('%s: %s' % ('stats'.rjust(14), self.stats))
         return '\n'.join(lines)
 
@@ -493,7 +499,6 @@ class Bag(object):
     __readwrite = ['bagname', 'bag_type', 'path', 'payload', 'machine',
         'item', 'created', ]
     __relations = ['machine', 'item']
-    #__types = ['', 'Access', 'Preservation', 'Export']
     __options = {
         'bag_type': [('1', 'Access'), ('2', 'Preservation'), ('3', 'Export')]
         }
@@ -570,8 +575,11 @@ class Bag(object):
                 raise InventoryError(response.text)
         elif self.__loaded:
             for field in vars(self):
-                data[field] = getattr(self, field)
-            response = _put('bag', **data)
+                if field in self.__relations:
+                    data[field] = getattr(self, field).resource_uri
+                else:
+                    data[field] = getattr(self, field)
+            response = _put('bag', self.bagname, **data)
             if response.status_code == 204:
                 return self
             else:
