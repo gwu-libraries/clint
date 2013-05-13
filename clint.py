@@ -2,7 +2,7 @@
 
 import argparse
 
-from inventory import *
+from inventory import Machine, Collection, Project, Item, Bag, _delete
 import settings
 
 
@@ -19,11 +19,11 @@ list collections/items/bags/files in collection/item/bag <id>
 
 Managing Bags
 -------------
-makebag <dir>
+bag <dir>
 rebag <dir>
 copy <id> 
-move bag <id>
-validate bag <id>
+move <id>
+validate <id>
 '''
 
 def show(model, id):
@@ -45,22 +45,26 @@ def add(model):
         print 'Error creating record!\n', e
         raise
 
-"""
+
 def edit(model, id, **kwargs):
-    response = inventory.patch(model, id, kwargs)
-    if response.status_code == 202:
-        print 'Successful edit of %s %s' % (model, id)
-    else:
-        print 'Error editing %s %s' % (model, id)
+    try:
+        obj = globals()[model.capitalize()](id)
+        edit_obj(obj)
+        print '\n%s Edited!\n' % model.capitalize()
+        print obj.to_string()
+    except Inventory404, e:
+        print 'No record found for %s %s' % (model, id)
+    except Exception, e:
+        print 'Error editing record!\n', e
 
 
 def delete(model, id):
-    response = inventory.delete(model, id)
+    response = _delete(model, id)
     if response.status_code == 204:
         print 'Successful deletion of %s %s' % (model, id)
     else:
         print 'Error deleting %s %s' % (model, id)
-"""
+
 
 def build_new_obj(model):
     obj = globals()[model.capitalize()]()
@@ -75,10 +79,22 @@ def build_new_obj(model):
         setattr(obj, attr, value)
     return obj.save()
 
+def edit_obj(obj):
+    print obj.to_string()
+    print '\nEditable Fields'
+    for attr, opts in obj.writeopts():
+        if opts:
+            optlist = ', '.join(['%s=%s' % (k, v) for k, v in opts])
+            prompt = '%s [Options: %s]: ' % (attr, optlist)
+        else:
+            prompt = '%s: ' % attr
+        value = raw_input(prompt)
+        setattr(obj, attr, value)
+    return obj.save()
 
 def main():
 
-    actions = ['show', 'add', 'edit', 'delete']
+    actions = ['show', 'add', 'edit', 'delete', 'list']
     models = ['machine', 'collection', 'project', 'item', 'bag']
 
     parser = argparse.ArgumentParser(
