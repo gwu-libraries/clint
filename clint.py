@@ -1,6 +1,9 @@
 #! ENV/bin/python
 
 import argparse
+from pprint import pprint
+
+import bagit
 
 from inventory import Machine, Collection, Project, Item, Bag, _delete
 from inventory import Inventory404
@@ -105,6 +108,38 @@ def user_edit_obj(obj):
             prompt = '%s: ' % attr
         value = raw_input(prompt)
         setattr(obj, attr, value)
+
+
+def bag(args):
+    try:
+        bag = bagit.make_bag(args.path)
+        print 'Bag created!'
+        pprint(bag.entries)
+        #TODO create bag in Inventory
+    except Exception, e:
+        print 'Error making bag\n%s' % e
+        raise
+
+
+def rebag(args):
+    pass
+
+
+def validate(args):
+    bag = bagit.Bag(args.path)
+    if bag.is_valid():
+        print 'Bag is valid!'
+        #TODO add action to inventory
+    else:
+        print 'Bag is NOT valid'
+
+
+def copy(args):
+    pass
+
+
+def move(args):
+    pass
 
 
 def main():
@@ -250,7 +285,32 @@ def main():
         help='type of object to be acted on')
     del_parser.add_argument('id', default=None,
         help='identifier of the object')
-    del_parser.set_defaults(func=delete)    
+    del_parser.set_defaults(func=delete)
+
+    # parser for the "bag" command
+    bag_parser = subparsers.add_parser('bag', help='Make a bag')
+    bag_parser.add_argument('path',
+        help='Relative path of directory to convert to a bag')
+    bag_parser.set_defaults(func=bag)
+
+    rebag_parser = subparsers.add_parser('rebag',
+        help='Repackage and rehash a bag')
+    rebag_parser.add_argument('path', help='Relative path to the bag')
+    rebag_parser.set_defaults(func=rebag)
+
+    valid_parser = subparsers.add_parser('validate', help='Validate a bag')
+    valid_parser.add_argument('path', help='Relative path to the bag')
+    valid_parser.set_defaults(func=validate)
+
+    copy_parser = subparsers.add_parser('copy', help='Copy a bag')
+    copy_parser.add_argument('source', help='Relative path to the source bag')
+    copy_parser.add_argument('target', help='Relative path to the target bag')
+    copy_parser.set_defaults(func=copy)
+
+    move_parser = subparsers.add_parser('move', help='Move a bag')
+    move_parser.add_argument('source', help='Relative path to the source bag')
+    move_parser.add_argument('target', help='Relative path to the target bag')
+    move_parser.set_defaults(func=move)
 
     args = parser.parse_args()
     args.func(args)
