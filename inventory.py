@@ -103,8 +103,11 @@ class Machine(object):
         else:
             raise InventoryError()
 
-    def writeables(self):
-        return self.__class__.__readwrite
+    def readwrite(self):
+        return self.__readwrite
+
+    def writeopts(self):
+        return [(attr, None) for attr in self.__class__.__readwrite]
 
     def save(self):
         """
@@ -138,8 +141,8 @@ class Machine(object):
             self._load_properties()
         lines = ['--Machine--']
         lines.append('%s: %s' % ('id'.rjust(4), self.__id))
-        lines.append('%s: %s' % ('name'.rjust(4), self.__name))
-        lines.append('%s: %s' % ('url'.rjust(4), self.__url))
+        lines.append('%s: %s' % ('name'.rjust(4), self.name))
+        lines.append('%s: %s' % ('url'.rjust(4), self.url))
         return '\n'.join(lines)
 
 
@@ -192,6 +195,9 @@ class Collection(object):
         else:
             print response.status_code
             raise InventoryError()
+
+    def readwrite(self):
+        return self.__readwrite
 
     def writeopts(self):
         return [(attr, None) for attr in self.__class__.__readwrite]
@@ -283,7 +289,7 @@ class Project(object):
             self.name = data['name']
             self.manager = data['manager']
             self.__created = data['created']
-            self.collection = collection_id
+            self.collection = Collection(collection_id)
             self.start_date = data['start_date']
             self.end_date = data['end_date']
             self.__stats = data['stats']
@@ -293,6 +299,9 @@ class Project(object):
             raise Inventory404()
         else:
             raise InventoryError()
+
+    def readwrite(self):
+        return self.__readwrite
 
     def writeopts(self):
         return [(attr, None) for attr in self.__class__.__readwrite]
@@ -352,9 +361,14 @@ class Item(object):
         'original_item_type']
     __relations = ['collection', 'project']
     __options = {
-        'original_item_type': 
-            [('1', 'book'), ('2', 'microfilm'), ('3', 'audio'),
-            ('4', 'video'), ('5', 'mixed'), ('6', 'other')]
+        'original_item_type': {
+            '1': 'book',
+            '2': 'microfilm',
+            '3': 'audio',
+            '4': 'video',
+            '5': 'mixed',
+            '6': 'other'
+            }
         }
 
     def __init__(self, id=None, title='', local_id='', notes='', stats=None,
@@ -376,6 +390,8 @@ class Item(object):
     def __setattr__(self, key, value):
         if key in self.__relations and isinstance(value, str):
             value = globals()[key.capitalize()](id=value)
+        if key in self.options().keys() and value in self.options(field=key).values():
+            value = self.options(field=key, value=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
         else:
@@ -401,8 +417,8 @@ class Item(object):
             self.title = data['title']
             self.local_id = data['local_id']
             self.__created = data['created']
-            self.collection = collection_id
-            self.project = project_id
+            self.collection = Collection(collection_id)
+            self.project = Project(project_id)
             self.original_item_type = data['original_item_type']
             self.__stats = data['stats']
             self.__resource_uri = data['resource_uri']
@@ -411,6 +427,9 @@ class Item(object):
             raise Inventory404()
         else:
             raise InventoryError()
+
+    def readwrite(self):
+        return self.__readwrite
     
     def writeopts(self):
         output = []
@@ -432,14 +451,13 @@ class Item(object):
                 return self.__options[field]
             # if given field and key, return value of that option
             elif key is not None:
-                for tup in self.__options[field]:
-                    if tup[0] == key:
-                        return tup[1]
+                if key in self.__options[field].keys():
+                    return self.__options[field][key]
             # if given field and value, give option key
             elif value is not None:
-                for tup in self.__options[field]:
-                    if tup[1] == value:
-                        return tup[0]
+                for k, v in self.__options[field].items():
+                    if value == v:
+                        return k
 
     def save(self):
         """
@@ -500,7 +518,11 @@ class Bag(object):
         'item', 'created', ]
     __relations = ['machine', 'item']
     __options = {
-        'bag_type': [('1', 'Access'), ('2', 'Preservation'), ('3', 'Export')]
+        'bag_type': {
+            '1': 'Access',
+            '2': 'Preservation',
+            '3': 'Export'
+            }
         }
 
     def __init__(self, bagname=None, created=None, item=None, machine=None,
@@ -520,6 +542,8 @@ class Bag(object):
     def __setattr__(self, key, value):
         if key in self.__relations and isinstance(value, str):
             value = globals()[key.capitalize()](id=value)
+        if key in self.options().keys() and value in self.options(field=key).values():
+            value = self.options(field=key, value=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
         else:
@@ -587,6 +611,9 @@ class Bag(object):
         else:
             return self
 
+    def readwrite(self):
+        return self.__readwrite
+
     def writeopts(self):
         output = []
         for attr in self.__class__.__readwrite:
@@ -607,14 +634,13 @@ class Bag(object):
                 return self.__options[field]
             # if given field and key, return value of that option
             elif key is not None:
-                for tup in self.__options[field]:
-                    if tup[0] == key:
-                        return tup[1]
+                if key in self.__options[field].keys():
+                    return self.__options[field][key]
             # if given field and value, give option key
             elif value is not None:
-                for tup in self.__options[field]:
-                    if tup[1] == value:
-                        return tup[0]
+                for k, v in self.__options[field].items():
+                    if value == v:
+                        return k
 
     def to_string(self):
         if not self.__loaded:
