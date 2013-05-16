@@ -82,7 +82,7 @@ class Machine(object):
             super(Machine, self).__setattr__(key, value)
 
     def __getattr__(self, key):
-        if self.__id and not self.__loaded:
+        if not self.__loaded:
             self._load_properties()
         if key in self.__class__.__readonly:
             return super(Machine, self).__getattribute__("_%s__%s" %
@@ -193,7 +193,6 @@ class Collection(object):
         elif response.status_code == 404:
             raise Inventory404()
         else:
-            print response.status_code
             raise InventoryError()
 
     def readwrite(self):
@@ -264,8 +263,11 @@ class Project(object):
         return '<Project %s>' % self.id
 
     def __setattr__(self, key, value):
-        if key in self.__relations and isinstance(value, str):
-            value = globals()[key.capitalize()](id=value)
+        if key in self.__relations and \
+            (isinstance(value, str) or isinstance(value, unicode)):
+            obj = globals()[key.capitalize()](id=value)
+            obj._load_properties()
+            value = obj
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
         else:
@@ -289,7 +291,7 @@ class Project(object):
             self.name = data['name']
             self.manager = data['manager']
             self.__created = data['created']
-            self.collection = Collection(collection_id)
+            self.collection = collection_id
             self.start_date = data['start_date']
             self.end_date = data['end_date']
             self.__stats = data['stats']
@@ -388,9 +390,12 @@ class Item(object):
         return '<Item %s>' % self.__id
 
     def __setattr__(self, key, value):
-        if key in self.__relations and isinstance(value, str):
-            value = globals()[key.capitalize()](id=value)
-        if key in self.options().keys() and value in self.options(field=key).values():
+        if key in self.__relations and \
+            (isinstance(value, str) or isinstance(value, unicode)):
+            obj = globals()[key.capitalize()](id=value)
+            obj._load_properties()
+            value = obj
+        elif key in self.options().keys() and value in self.options(field=key).values():
             value = self.options(field=key, value=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
@@ -417,8 +422,8 @@ class Item(object):
             self.title = data['title']
             self.local_id = data['local_id']
             self.__created = data['created']
-            self.collection = Collection(collection_id)
-            self.project = Project(project_id)
+            self.collection = collection_id
+            self.project = project_id
             self.original_item_type = data['original_item_type']
             self.__stats = data['stats']
             self.__resource_uri = data['resource_uri']
@@ -537,12 +542,15 @@ class Bag(object):
         self.item = item
 
     def __str__(self):
-        return '<Bag %s>' % self.__id
+        return '<Bag %s>' % self.bagname
 
     def __setattr__(self, key, value):
-        if key in self.__relations and isinstance(value, str):
-            value = globals()[key.capitalize()](id=value)
-        if key in self.options().keys() and value in self.options(field=key).values():
+        if key in self.__relations and \
+            (isinstance(value, str) or isinstance(value, unicode)):
+            obj = globals()[key.capitalize()](id=value)
+            obj._load_properties()
+            value = obj
+        elif key in self.options().keys() and value in self.options(field=key).values():
             value = self.options(field=key, value=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
@@ -567,8 +575,8 @@ class Bag(object):
             self.bagname = data['bagname']
             self.created = data['created']
             self.bag_type = data['bag_type']
-            self.item = Item(item_id)
-            self.machine = Machine(machine_id)
+            self.item = item_id
+            self.machine = machine_id
             self.path = data['path']
             self.payload = data['payload']
             self.__resource_uri = data['resource_uri']
@@ -593,7 +601,7 @@ class Bag(object):
             response = _post('bag', **data)
             if response.status_code == 201:
                 url = response.headers['Location']
-                self.__id = '/'.join(url.rstrip('/').split('/')[-2:])
+                self.bagname = '/'.join(url.rstrip('/').split('/')[6:])
                 return self
             else:
                 raise InventoryError(response.text)
@@ -659,11 +667,138 @@ class Bag(object):
 
 class BagAction(object):
 
+    __readonly = ['id']
+    __readwrite = ['bag', 'timestamp', 'action', 'note']
+    __relations = ['bag']
+    __options = {
+        'action': {
+            '1': 'updated',
+            '2': 'moved',
+            '3': 'validated',
+            '4': 'imported'
+        }
+    }
+
     def __init__(self, bag='', timestamp='', action='', note=''):
+        self.__loaded = False
         self.bag = bag
         self.timestamp = timestamp
         self.action = action
         self.note = note
 
     def __str__(self):
-        return '<BagAction %s>' % self.action
+        return '<BagAction %s>' % self.__id
+
+    def __setattr__(self, key, value):
+        if key in self.__relations and \
+            (isinstance(value, str) or isinstance(value, unicode)):
+            obj = globals()[key.capitalize()](value)
+            obj._load_properties()
+            value = obj
+        elif key in self.options().keys() and value in self.options(field=key).values():
+            value = self.options(field=key, value=value)
+        if key in self.__class__.__readonly:
+            raise AttributeError("The attribute %s is read-only." % key)
+        else:
+            super(BagAction, self).__setattr__(key, value)
+
+    def __getattr__(self, key):
+        if not self.__loaded:
+            self._load_properties()
+        if key in self.__class__.__readonly:
+            return super(BagAction, self).__getattribute__("_%s__%s" %
+                (self.__class__.__name__, key))
+        else:
+            return super(BagAction, self).__getattribute__(key)
+
+    def _load_properties(self):
+        response = _get('bagaction', self.__id)
+        if response.status_code == 200:
+            data = response.json()
+            bagname = '/'.join(data['bag'].rstrip('/').split('/')[4:])
+            self.bag = bagname
+            self.timestamp = data['timestamp']
+            self.action = data['action']
+            self.note = data['note']
+            self.__resource_uri = data['resource_uri']
+            self.__loaded = True
+        elif response.status_code == 404:
+            raise Inventory404()
+        else:
+            raise InventoryError()
+
+    def save(self):
+        """
+        Store bag in Inventory
+        Do a POST if new (no ID) and PUT otherwise
+        """
+        data = {}
+        if not self.__loaded:
+            for field in self.__class__.__readwrite:
+                if field in self.__relations:
+                    data[field] = getattr(self, field).resource_uri
+                else:
+                    data[field] = getattr(self, field)
+            response = _post('bagaction', **data)
+            if response.status_code == 201:
+                url = response.headers['Location']
+                self.__id = '/'.join(url.rstrip('/').split('/')[6:])
+                return self
+            else:
+                raise InventoryError(response.text)
+        elif self.__loaded:
+            for field in vars(self):
+                if field in self.__relations:
+                    data[field] = getattr(self, field).resource_uri
+                else:
+                    data[field] = getattr(self, field)
+            response = _put('bagaction', self.__id, **data)
+            if response.status_code == 204:
+                return self
+            else:
+                raise InventoryError(response)
+        else:
+            return self
+
+    def readwrite(self):
+        return self.__readwrite
+
+    def writeopts(self):
+        output = []
+        for attr in self.__class__.__readwrite:
+            if attr in self.__options.keys():
+                opts = self.options(attr)
+            else:
+                opts = None
+            output.append((attr, opts))
+        return output
+
+    def options(self, field=None, key=None, value=None):
+        # if not arguments sent, output entire dictionary
+        if field is None and key is None and value is None:
+            return self.__options
+        elif field is not None:
+            # if field set w/o key or value to fine, give option tuples list
+            if key is None and value is None:
+                return self.__options[field]
+            # if given field and key, return value of that option
+            elif key is not None:
+                if key in self.__options[field].keys():
+                    return self.__options[field][key]
+            # if given field and value, give option key
+            elif value is not None:
+                for k, v in self.__options[field].items():
+                    if value == v:
+                        return k
+
+    def to_string(self):
+        if not self.__loaded:
+            self._load_properties()
+        lines = ['--BagAction--'.rjust(16)]
+        lines.append('%s: %s' % ('id'.rjust(8), self.id))
+        lines.append('%s: %s' % ('bag'.rjust(8), self.bag))
+        lines.append('%s: %s' % ('action'.rjust(8),
+            self.options('action', self.action)))
+        lines.append('%s: %s' % ('timestamp'.rjust(8), self.timestamp))
+        lines.append('%s: %s' % ('note'.rjust(8), self.note))
+        return '\n'.join(lines)
