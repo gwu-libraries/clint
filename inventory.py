@@ -729,7 +729,7 @@ class BagAction(object):
 
     def save(self):
         """
-        Store bag in Inventory
+        Store action in Inventory
         Do a POST if new (no ID) and PUT otherwise
         """
         data = {}

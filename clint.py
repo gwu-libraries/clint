@@ -171,13 +171,47 @@ def bag(args):
             print 'names don\'t match! obj: %s, bag: %s' % (obj.bagname, bagname)
             shutil.move(args.path, os.path.join(dirname, obj.bagname))
         print obj.to_string()
+    except OSError:
+        print 'Bag already exists'
+        ans = ''
+        while ans.upper() not in ['Y', 'N', 'YES', 'NO']:
+            ans = raw_input('Shall I update it (rebag)? [yes/no] ')
+        if ans.upper() in ['Y', 'YES']:
+            rebag(args)
     except Exception, e:
         print 'Error making bag\n%s' % e
         raise
 
 
 def rebag(args):
-    pass
+    # Ideally, this behavior should be included in the bagit.py package
+    # remove bag info and manifest files
+    bagpath = args.path
+    bagname = os.path.basename(bagpath)
+    for f in os.listdir(bagpath):
+        fpath = os.path.join(bagpath, f)
+        if os.path.isfile(fpath):
+            os.remove(fpath)
+    # move subdirs in data back to bag root
+    datapath = os.path.join(bagpath, 'data')
+    for subd in os.listdir(datapath):
+        shutil.move(os.path.join(datapath, subd), os.path.join(bagpath, subd))
+    # remove data dir
+    os.removedirs(datapath)
+    # bag it again
+    bag = bagit.make_bag(args.path)
+    print 'Bag updated!'
+    pprint(bag.entries)
+    # also create the inventory object
+    obj = Bag(bagname=bagname)
+    obj._load_properties()
+    # load payload
+    obj.payload = build_bag_payload(bag, bagpath)
+    obj.save()
+    action = BagAction(bag=bagname, timestamp=str(datetime.now()),
+        action='1', note='initiated by clint')
+    action.save()
+    print 'Action recorded in Inventory'
 
 
 def validate(args):
