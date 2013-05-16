@@ -1,12 +1,15 @@
 #! ENV/bin/python
 
 import argparse
+from datetime import datetime
+import os
 from pprint import pprint
+import shutil
 
 import bagit
 
-from inventory import Machine, Collection, Project, Item, Bag, _delete
-from inventory import Inventory404
+from inventory import Machine, Collection, Project, Item, Bag, BagAction
+from inventory import Inventory404, _delete
 import settings
 
 
@@ -29,6 +32,11 @@ copy <id>
 move <id>
 validate <id>
 '''
+# reference variables
+models = ['machine', 'collection', 'project', 'item', 'bag']
+orig_item_types = ['book', 'microfilm', 'audio', 'video', 'mixed',
+    'other']
+bag_types = ['access', 'preservation', 'export']
 
 
 def show(args):
@@ -94,7 +102,12 @@ def user_build_new_obj(obj, model):
             prompt = '%s [Options: %s]: ' % (attr, optlist)
         else:
             prompt = '%s: ' % attr
-        value = raw_input(prompt)
+        if attr == 'created':
+            value = str(datetime.now())
+        elif model == 'bag' and attr == 'payload' and obj.payload:
+            continue
+        else:
+            value = raw_input(prompt)
         setattr(obj, attr, value)
 
 
@@ -110,12 +123,54 @@ def user_edit_obj(obj):
         setattr(obj, attr, value)
 
 
+def build_bag_payload(bagitbag, path):
+    payload = []
+    for f in bagitbag.payload_files():
+        size = os.path.getsize(os.path.join(path, f))
+        payload.append('%s %s' % (f, size))
+    return '\n'.join(payload)
+
+
 def bag(args):
     try:
+        # first create the bag
         bag = bagit.make_bag(args.path)
         print 'Bag created!'
         pprint(bag.entries)
-        #TODO create bag in Inventory
+        # also create the inventory object
+        obj = Bag()
+        # load payload
+        obj.payload = build_bag_payload(bag, args.path)
+        # try to parse the optional fields
+        if args.remainder:
+            addb = argparse.ArgumentParser()
+            addb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
+            addb.add_argument('-t', '--bagtype', choices=bag_types,
+                help='Type of bag')
+            addb.add_argument('-p', '--path', help='Path to bag from server root')
+            addb.add_argument('-y', '--payload', help='Payload of the bag')
+            addb.add_argument('-m', '--machine',
+                help='Machine this bag is stored on')
+            addb.add_argument('-i', '--item',
+                help='Item this bag is associated with')
+            addb.add_argument('-c', '--created',
+                help='Timestamp when this bag was created')
+            addb.add_argument('--model', default='bag')
+            addb.set_defaults(func=add)
+            addbargs = addb.parse_args(args.remainder)
+            vals = [a for a in obj.readwrite() if getattr(addbargs, a, None) is not None]
+            for attr in vals:
+                setattr(obj, attr, getattr(addbargs, attr))
+        # otherwise prompt the user
+        else:
+            user_build_new_obj(obj, 'bag')
+        obj.save()
+        # adjust the bagname based on arguments
+        dirname, bagname = os.path.split(args.path)
+        if obj.bagname and obj.bagname != bagname:
+            print 'names don\'t match! obj: %s, bag: %s' % (obj.bagname, bagname)
+            shutil.move(args.path, os.path.join(dirname, obj.bagname))
+        print obj.to_string()
     except Exception, e:
         print 'Error making bag\n%s' % e
         raise
@@ -129,7 +184,12 @@ def validate(args):
     bag = bagit.Bag(args.path)
     if bag.is_valid():
         print 'Bag is valid!'
-        #TODO add action to inventory
+        bagname = os.path.basename(args.path)
+        action = BagAction(bag=bagname, timestamp=str(datetime.now()),
+            action='3', note='initiated by clint')
+        action.save()
+        print 'action id: %s' % action.id
+        print action.to_string()
     else:
         print 'Bag is NOT valid'
 
@@ -139,17 +199,10 @@ def copy(args):
 
 
 def move(args):
-    pass
+    print 'Move operations not supported yet'
 
 
 def main():
-
-    # reference variables
-    models = ['machine', 'collection', 'project', 'item', 'bag']
-    orig_item_types = ['book', 'microfilm', 'audio', 'video', 'mixed',
-        'other']
-    bag_types = ['access', 'preservation', 'export']
-
     # create clint level parser
     parser = argparse.ArgumentParser(
         description='A command line tool for Inventory operations')
@@ -291,6 +344,7 @@ def main():
     bag_parser = subparsers.add_parser('bag', help='Make a bag')
     bag_parser.add_argument('path',
         help='Relative path of directory to convert to a bag')
+    bag_parser.add_argument('remainder', nargs=argparse.REMAINDER)
     bag_parser.set_defaults(func=bag)
 
     rebag_parser = subparsers.add_parser('rebag',
