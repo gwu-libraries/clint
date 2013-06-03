@@ -40,19 +40,6 @@ def _delete(model, pk):
     return requests.delete(url, headers=auth_header)
 
 
-# API methods
-'''
-def getobject(model, pk):
-    response = _get(model, pk)
-    if response.status_code == 200:
-        return _build_object(model, response)
-    elif response.status_code == 404:
-        raise Inventory404
-    else:
-        raise InventoryError
-'''
-
-
 class Inventory404(Exception):
     pass
 
