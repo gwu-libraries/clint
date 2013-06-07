@@ -39,6 +39,18 @@ def _delete(model, pk):
     url = '%s/%s/%s/' % (baseurl, model, pk)
     return requests.delete(url, headers=auth_header)
 
+# helper functions
+
+def parse_id(location, uri=False):
+    # Parsea an object id from the 'location' returned by API 201 response.
+    # Option to return just the id or the relative uri,
+    # such as: /api/v1/item/38989/c01hf854dw
+    uriparts = location.strip('/').split('/')[3:]
+    if uri is True:
+        return '/%s/' % '/'.join(uriparts)
+    else:
+        return '/'.join(uriparts[3:])
+
 
 class Inventory404(Exception):
     pass
