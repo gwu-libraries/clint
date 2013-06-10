@@ -131,12 +131,6 @@ class TestInventoryHTTPMethods(unittest.TestCase):
         self.assertEqual(response1.status_code, 500)
         # That should really be a 400, but tastypie returns a 500, patch pending
 
-    """
-    def testpatch(self):
-        cdata = {'description': 'Patch Worked!'}
-        response = inventory._patch('collection', '12345/c00000000001', **cdata)
-        self.assertEqual(response.status_code, 202)
-    """
 
 if __name__ == '__main__':
     unittest.main()
