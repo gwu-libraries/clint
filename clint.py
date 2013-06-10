@@ -178,7 +178,10 @@ def bag(args):
         # adjust the bagname based on arguments
         dirname, bagname = os.path.split(args.path)
         if obj.bagname and obj.bagname != bagname:
-            shutil.move(args.path, os.path.join(dirname, obj.bagname))
+            newpath = os.path.join(dirname, obj.bagname.replace('/', '_'))
+            shutil.move(args.path, newpath)
+            obj.path = newpath
+        obj.save()
         print obj.to_string()
     except OSError:
         print 'Bag already exists'
