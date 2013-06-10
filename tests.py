@@ -13,6 +13,9 @@ settings.INVENTORY_CREDENTIALS = sandbox
 @skipIf(not all([sandbox.get(k) for k in sandbox.keys()]),
     'sandbox inventory not set')
 class TestInventoryHTTPMethods(unittest.TestCase):
+    '''
+    These tests require a live sandbox inventory to communicate with
+    '''
 
     def setUp(self):
         '''setUp is also a test of the post method'''
@@ -58,7 +61,7 @@ class TestInventoryHTTPMethods(unittest.TestCase):
     def tearDown(self):
         '''tearDown is also a test of the delete method'''
         # delete all objects created in setUp
-        # go in reverse order until cascade rules have been removed fro inventory
+        # go in reverse order until cascade rules have been removed from inventory
         res5 = inv._delete('bag', self.bag_id)
         self.assertEqual(res5.status_code, 204)
         res4 = inv._delete('item', self.item_id)
