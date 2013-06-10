@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 import os
 from pprint import pprint
+import readline
 import shutil
 
 import bagit
@@ -97,30 +98,34 @@ def delete(args):
 def user_build_new_obj(obj, model):
     print 'Enter field values for new %s' % model
     for attr, opts in obj.writeopts():
-        if opts:
-            optlist = ', '.join(['%s=%s' % (k, v) for k, v in opts.items()])
-            prompt = '%s [Options: %s]: ' % (attr, optlist)
-        else:
-            prompt = '%s: ' % attr
         if attr == 'created':
             value = str(datetime.now())
         elif model == 'bag' and attr == 'payload' and obj.payload:
             continue
         else:
-            value = raw_input(prompt)
+            value = get_user_input(obj, attr, opts)
         setattr(obj, attr, value)
 
 
 def user_edit_obj(obj):
     print '\nEditable Fields'
     for attr, opts in obj.writeopts():
-        if opts:
-            optlist = ', '.join(['%s=%s' % (k, v) for k, v in opts.items()])
-            prompt = '%s [Options: %s]: ' % (attr, optlist)
-        else:
-            prompt = '%s: ' % attr
-        value = raw_input(prompt)
+        value = get_user_input(obj, attr, opts)
         setattr(obj, attr, value)
+
+
+def get_user_input(obj, attr, opts):
+    if opts:
+        optlist = ', '.join(['%s=%s' % (k, v) for k, v in opts.items()])
+        prompt = '%s [Options: %s]: ' % (attr, optlist)
+    else:
+        prompt = '%s: ' % attr
+    prefill = getattr(obj, attr)
+    readline.set_startup_hook(lambda: readline.insert_text(prefill))
+    try:
+        return raw_input(prompt)
+    finally:
+        readline.set_startup_hook()
 
 
 def build_bag_payload(bagitbag, path):
