@@ -146,6 +146,10 @@ def bag(args):
         obj = Bag()
         # load payload
         obj.payload = build_bag_payload(bag, args.path)
+        # load path and bagname values
+        bagdir, bagname = os.path.split(args.path)
+        obj.bagname = bagname
+        obj.path = os.path.abspath(os.path.join(os.getcwd(), bagdir, bagname))
         # try to parse the optional fields
         if args.remainder:
             addb = argparse.ArgumentParser()
@@ -164,6 +168,7 @@ def bag(args):
             addb.set_defaults(func=add)
             addbargs = addb.parse_args(args.remainder)
             vals = [a for a in obj.readwrite() if getattr(addbargs, a, None) is not None]
+            print 'vals: %s' % vals
             for attr in vals:
                 setattr(obj, attr, getattr(addbargs, attr))
         # otherwise prompt the user
@@ -173,7 +178,6 @@ def bag(args):
         # adjust the bagname based on arguments
         dirname, bagname = os.path.split(args.path)
         if obj.bagname and obj.bagname != bagname:
-            print 'names don\'t match! obj: %s, bag: %s' % (obj.bagname, bagname)
             shutil.move(args.path, os.path.join(dirname, obj.bagname))
         print obj.to_string()
     except OSError:
