@@ -101,10 +101,26 @@ class TestInventoryHTTPMethods(unittest.TestCase):
         self.assertEqual(j5['objects'][0]['item'], '/api/v1/item/%s/' % self.item_id)
 
     def testput(self):
-        pass
+        cdata = {"manager": "Glenn Danzig"}
+        res1 = inv._put('collection', self.collection_id, **cdata)
+        self.assertEqual(res1.status_code, 204)
+        res2 = inv._get('collection', self.collection_id)
+        self.assertEqual(res2.status_code, 200)
+        j2 = res2.json()
+        # test that sent data has been changed
+        self.assertEqual(j2['manager'], 'Glenn Danzig')
+        # test that an incomplete data set will overwrite with blanks
+        # self.assertEqual(j2['name'], '')
 
     def testpatch(self):
-        pass
+        cdata = {"manager": "Glenn Danzig"}
+        res1 = inv._patch('collection', self.collection_id, **cdata)
+        self.assertEqual(res1.status_code, 202)
+        res2 = inv._get('collection', self.collection_id)
+        self.assertEqual(res2.status_code, 200)
+        j2 = res2.json()
+        self.assertEqual(j2['name'], 'Test Collection 1')
+        self.assertEqual(j2['manager'], 'Glenn Danzig')
 
     def testbadpost(self):
         # create a collection with a name that is too long
