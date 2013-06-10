@@ -8,7 +8,61 @@ This project is intended to work in concert with the inventory system, held at h
 
 It is a command line tool for the management of inventory and storage systems.  It will offer commands to add and edit collections, projects, items, and bags in the inventory system.
 
-USAGE
+Installation
+------------
+
+Part I - Initial dependencies
+
+1. Install Git if not already installed
+
+        $ sudo apt-get install git-core
+
+2. Install virtualenv if not already installed
+
+        $ sudo apt-get install python-setuptools
+        $ sudo easy_install virtualenv
+
+Part II - Download the project
+
+3. Change to your designated directory
+
+        $ cd /<projects dir>
+
+4. Pull down the project from github
+
+        (GW staff only)
+        $ git clone git@github.com:gwu-libraries/inventory.git
+
+        (everyone else)
+        $ git clone https://github.com/gwu-libraries/inventory.git
+
+5. Create virtual Python environment for the project
+
+        $ cd clint
+        $ virtualenv --no-site-packages ENV
+
+6. Activate your virtual environment
+
+        $ source ENV/bin/activate
+
+7. install other python dependencies
+
+        (ENV)$ pip install -r requirements.txt
+
+Part III - Configure your instance
+
+8. Copy the local settings template to an active file
+
+        (ENV)$ cp local_settings.py.template local_settings.py
+
+9. Update the values in the local_settings file to point to your production and sandbox instances of Inventory
+
+        (ENV)$ vim local_settings.py
+
+Your ready to use it
+
+
+Usage
 -----
 
 For help with all commands and subcommands use the --help flag
