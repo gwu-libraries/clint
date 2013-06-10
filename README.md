@@ -59,7 +59,7 @@ Part III - Configure your instance
 
         (ENV)$ vim local_settings.py
 
-Your ready to use it
+You're ready to use it
 
 
 Usage
