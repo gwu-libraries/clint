@@ -6,14 +6,16 @@ INVENTORY_CREDENTIALS = {
     'apikey': '',
     'apiversion': '',
     'url': '',
-    'port': ''
+    'port': '',
+    'verify_ssl_cert': True
 }
 
 inventory_sandbox = {
     'user': '',
     'apikey': '',
     'url': '',
-    'port': ''
+    'port': '',
+    'verify_ssl_cert': True
 }
 
 try:

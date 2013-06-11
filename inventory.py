@@ -14,30 +14,35 @@ def _get(model, pk):
     params = {'format': 'json', 'username': creds['user'],
         'api_key': creds['apikey']}
     url = '%s/%s/%s/' % (baseurl, model, pk)
-    return requests.get(url, params=params, headers=auth_header)
+    return requests.get(url, params=params, headers=auth_header,
+        verify=creds['verify_ssl_cert'])
 
 
 def _post(model, **data):
     # POST is for new items, not changes. Use PUT or PATCH for changes
     url = '%s/%s/' % (baseurl, model)
-    return requests.post(url, data=json.dumps(data), headers=auth_header)
+    return requests.post(url, data=json.dumps(data), headers=auth_header,
+        verify=creds['verify_ssl_cert'])
 
 
 def _put(model, pk, **data):
     # PUT changes all fields (overwrites with blank if you don't set a value)
     # use PATCH to change one or two fields without setting them all
     url = '%s/%s/%s/' % (baseurl, model, pk)
-    return requests.put(url, data=json.dumps(data), headers=auth_header)
+    return requests.put(url, data=json.dumps(data), headers=auth_header,
+        verify=creds['verify_ssl_cert'])
 
 
 def _patch(model, pk, **data):
     url = '%s/%s/%s/' % (baseurl, model, pk)
-    return requests.patch(url, data=json.dumps(data), headers=auth_header)
+    return requests.patch(url, data=json.dumps(data), headers=auth_header,
+        verify=creds['verify_ssl_cert'])
 
 
 def _delete(model, pk):
     url = '%s/%s/%s/' % (baseurl, model, pk)
-    return requests.delete(url, headers=auth_header)
+    return requests.delete(url, headers=auth_header,
+        verify=creds['verify_ssl_cert'])
 
 # helper functions
 
