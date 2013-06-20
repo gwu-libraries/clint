@@ -10,10 +10,13 @@ auth_header = {'Authorization': 'ApiKey %s:%s' % (creds['user'],
 
 # Base HTTP methods
 
-def _get(model, pk):
-    params = {'format': 'json', 'username': creds['user'],
-        'api_key': creds['apikey']}
-    url = '%s/%s/%s/' % (baseurl, model, pk)
+def _get(model, pk=None, params={}):
+    params.update({'format': 'json', 'username': creds['user'],
+        'api_key': creds['apikey']})
+    if pk:
+        url = '%s/%s/%s/' % (baseurl, model, pk)
+    else:
+        url = '%s/%s/' % (baseurl, model)
     return requests.get(url, params=params, headers=auth_header,
         verify=creds['verify_ssl_cert'])
 
@@ -65,16 +68,34 @@ class InventoryError(Exception):
     pass
 
 
+class NoIdentifierError(Exception):
+    pass
+
+
+class NonUniqueIdentifierError(Exception):
+
+    def __init__(self, identifier):
+        self.identifier = identifier
+
+    def __str__(self):
+        return repr(self.identifier)
+
+
+
 class Machine(object):
 
     __readonly = ['id', 'resource_uri']
-    __readwrite = ['name', 'url']
+    __readwrite = ['name', 'url', 'ip', 'notes', 'access_root']
 
-    def __init__(self, id=None, name='', url=''):
+    def __init__(self, id=None, name='', url='', ip='', notes='',
+            access_root=''):
         self.__loaded = False
         self.__id = id
-        self.__name = name
-        self.__url = url
+        self.name = name
+        self.url = url
+        self.ip = data['ip']
+        self.notes = data['notes']
+        self.access_root = data['access_root']
 
     def __str__(self):
         return '<Machine %s>' % (self.__id)
@@ -100,6 +121,9 @@ class Machine(object):
             data = response.json()
             self.name = data['name']
             self.url = data['url']
+            self.ip = data['ip']
+            self.notes = data['notes']
+            self.access_root = data['access_root']
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
@@ -143,25 +167,29 @@ class Machine(object):
     def to_string(self):
         if not self.__loaded:
             self._load_properties()
-        lines = ['--Machine--']
-        lines.append('%s: %s' % ('id'.rjust(4), self.__id))
-        lines.append('%s: %s' % ('name'.rjust(4), self.name))
-        lines.append('%s: %s' % ('url'.rjust(4), self.url))
+        lines = ['--Machine--'.rjust(17)]
+        lines.append('%s: %s' % ('id'.rjust(11), self.__id))
+        lines.append('%s: %s' % ('name'.rjust(11), self.name))
+        lines.append('%s: %s' % ('url'.rjust(11), self.url))
+        lines.append('%s: %s' % ('ip'.rjust(11), self.ip))
+        lines.append('%s: %s' % ('notes'.rjust(11), self.notes))
+        lines.append('%s: %s' % ('access root'.rjust(11), self.access_root))
         return '\n'.join(lines)
 
 
 class Collection(object):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
-    __readwrite = ['name', 'description', 'manager']
+    __readwrite = ['name', 'description', 'manager', 'access_loc']
 
     def __init__(self, id=None, name='', description='', manager='',
-        created=None, stats=None):
+        created=None, access_loc='', stats=None):
         self.__loaded = False
         self.__id = id
         self.name = name
         self.description = description
         self.manager = manager
+        self.access_loc = access_loc
         self.__created = created
         self.__stats = stats
 
@@ -190,6 +218,7 @@ class Collection(object):
             self.name = data['name']
             self.description = data['description']
             self.manager = data['manager']
+            self.access_loc = data['access_loc']
             self.__created = data['created']
             self.__stats = data['stats']
             self.__resource_uri = data['resource_uri']
@@ -241,6 +270,7 @@ class Collection(object):
         lines.append('%s: %s' % ('created'.rjust(11), self.created))
         lines.append('%s: %s' % ('manager'.rjust(11), self.manager))
         lines.append('%s: %s' % ('description'.rjust(11), self.description))
+        lines.append('%s: %s' % ('access_loc'.rjust(11), self.access_loc))
         lines.append('%s: %s' % ('stats'.rjust(11), self.stats))
         return '\n'.join(lines)
 
@@ -248,7 +278,7 @@ class Collection(object):
 class Project(object):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
-    __readwrite = ['name', 'manager', 'collection', 'start_date', 'end_date']
+    __readwrite = ['name', 'collection']
     __relations = ['collection']
 
     def __init__(self, id=None, name='', manager='', created=None, stats=None,
@@ -293,11 +323,8 @@ class Project(object):
             collection_id = '/'.join(
                 data['collection'].rstrip('/').split('/')[-2:])
             self.name = data['name']
-            self.manager = data['manager']
             self.__created = data['created']
             self.collection = collection_id
-            self.start_date = data['start_date']
-            self.end_date = data['end_date']
             self.__stats = data['stats']
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
@@ -352,10 +379,7 @@ class Project(object):
         lines.append('%s: %s' % ('id'.rjust(10), self.__id))
         lines.append('%s: %s' % ('name'.rjust(10), self.name))
         lines.append('%s: %s' % ('created'.rjust(10), self.__created))
-        lines.append('%s: %s' % ('manager'.rjust(10), self.manager))
         lines.append('%s: %s' % ('collection'.rjust(10), self.collection))
-        lines.append('%s: %s' % ('start date'.rjust(10), self.start_date))
-        lines.append('%s: %s' % ('end date'.rjust(10), self.end_date))
         lines.append('%s: %s' % ('stats'.rjust(10), self.__stats))
         return '\n'.join(lines)
 
@@ -364,7 +388,7 @@ class Item(object):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
     __readwrite = ['title', 'local_id', 'notes', 'project', 'collection',
-        'original_item_type']
+        'original_item_type', 'access_loc']
     __relations = ['collection', 'project']
     __options = {
         'original_item_type': {
@@ -378,7 +402,8 @@ class Item(object):
         }
 
     def __init__(self, id=None, title='', local_id='', notes='', stats=None,
-        project=None, original_item_type='', created=None, collection=None):
+        project=None, original_item_type='', created=None, collection=None,
+        access_loc=''):
         self.__loaded = False
         self.__id = id
         self.title = title
@@ -389,6 +414,7 @@ class Item(object):
         self.__stats = stats
         self.collection = collection
         self.project = project
+        self.access_loc = access_loc
 
     def __str__(self):
         return '<Item %s>' % self.__id
@@ -416,9 +442,22 @@ class Item(object):
             return super(Item, self).__getattribute__(key)
 
     def _load_properties(self):
-        response = _get('item', self.__id)
+        if self.__id:
+            response = _get('item', self.__id)
+        elif self.local_id:
+            response = _get('item', params={'local_id': self.local_id})
+        else:
+            raise NoIdentifierError()
         if response.status_code == 200:
             data = response.json()
+            if not self.__id:
+                if len(data['objects']) > 1:
+                    raise NonUniqueIdentifierError(self.local_id)
+                elif len(data['objects']) == 0:
+                    raise Inventory404()
+                else:
+                    data = data['objects'][0]
+                    self.__id = data['id']
             collection_id = '/'.join(
                 data['collection'].rstrip('/').split('/')[-2:])
             project_id = '/'.join(
@@ -432,10 +471,11 @@ class Item(object):
             self.__stats = data['stats']
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
+            self.access_loc = data['access_loc']
         elif response.status_code == 404:
             raise Inventory404()
         else:
-            raise InventoryError()
+            raise InventoryError() 
 
     def readwrite(self):
         return self.__readwrite
@@ -513,6 +553,7 @@ class Item(object):
         lines.append('%s: %s' % ('project'.rjust(14), self.project))
         lines.append('%s: %s' % ('orig item type'.rjust(14),
             self.options('original_item_type', self.original_item_type)))
+        lines.append('%s: %s' % ('access_loc'.rjust(14), self.access_loc))
         lines.append('%s: %s' % ('notes'.rjust(14), self.notes))
         lines.append('%s: %s' % ('stats'.rjust(14), self.stats))
         return '\n'.join(lines)

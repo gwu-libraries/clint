@@ -2,7 +2,7 @@ import unittest
 from unittest import skipIf
 
 import inventory as inv
-from inventory import parse_id
+from inventory import parse_id, Item, NoIdentifierError, NonUniqueIdentifierError
 import settings
 from settings import inventory_sandbox as sandbox
 
@@ -10,7 +10,7 @@ from settings import inventory_sandbox as sandbox
 settings.INVENTORY_CREDENTIALS = sandbox
 
 
-@skipIf(not all([sandbox.get(k) for k in sandbox.keys()]),
+@skipIf(not all([sandbox.get(k) for k in sandbox.keys() if k != 'verify_ssl_cert']),
     'sandbox inventory not set')
 class TestInventoryHTTPMethods(unittest.TestCase):
     '''
@@ -30,19 +30,20 @@ class TestInventoryHTTPMethods(unittest.TestCase):
             "access_loc": "http://diglib.gwu.edu/collection/1"}
         res2 = inv._post('collection', **cdata)
         self.assertEqual(res2.status_code, 201)
+        self.collection_loc = res2.headers['location']
         self.collection_id = parse_id(res2.headers['location'])
+        self.collection_uri = parse_id(res2.headers['location'], uri=True)
         # create a project object
-        pdata = {"name": "Test Project 1", "manager": "Mike Patton",
-            "collection": parse_id(res2.headers['location'], uri=True),
-            "start_date": "2013-06-01",
-            "end_date": "2013-07-01"}
+        pdata = {"name": "Test Project 1",
+            "collection": parse_id(res2.headers['location'], uri=True)}
         res3 = inv._post('project', **pdata)
         self.assertEqual(res3.status_code, 201)
         self.project_id = parse_id(res3.headers['location'])
+        self.project_uri = parse_id(res3.headers['location'], uri=True)
         # create an item object
         idata = {"title": "Test Item 1", "local_id": "123456789",
-            "collection": parse_id(res2.headers['location'], uri=True),
-            "project": parse_id(res3.headers['location'], uri=True),
+            "collection": self.collection_uri,
+            "project": self.project_uri,
             "created": "2013-06-01",
             "original_item_type": "1", "notes": "nonoteworthynotes",
             "access_loc": "http://diglib.gwu.edu/item/1"}
@@ -57,6 +58,16 @@ class TestInventoryHTTPMethods(unittest.TestCase):
         res5 = inv._post('bag', **bdata)
         self.assertEqual(res5.status_code, 201)
         self.bag_id = parse_id(res5.headers['location'])
+        # create an item object similar to item 1
+        i2data = {"title": "Test Item 2", "local_id": "none",
+            "collection": self.collection_uri,
+            "project": self.project_uri,
+            "created": "2013-06-01",
+            "original_item_type": "1", "notes": "none",
+            "access_loc": "http://diglib.gwu.edu/item/2"}
+        res6 = inv._post('item', **i2data)
+        self.assertEqual(res6.status_code, 201)
+        self.item2_id = parse_id(res6.headers['location'])
 
     def tearDown(self):
         '''tearDown is also a test of the delete method'''
@@ -72,6 +83,8 @@ class TestInventoryHTTPMethods(unittest.TestCase):
         self.assertEqual(res2.status_code, 204)
         res1 = inv._delete('machine', self.machine_id)
         self.assertEqual(res1.status_code, 204)
+        res0 = inv._delete('item', self.item2_id)
+        self.assertEqual(res0.status_code, 204)
 
     def testget(self):
         # get a machine
@@ -130,6 +143,32 @@ class TestInventoryHTTPMethods(unittest.TestCase):
         response1 = inv._post('collection', **cdata)
         self.assertEqual(response1.status_code, 500)
         # That should really be a 400, but tastypie returns a 500, patch pending
+
+    def test_item_lookup_by_local_id(self):
+        res = inv._get('item', params={'local_id': '123456789'})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(len(data['objects']), 1)
+
+    def test_item_load_by_local_id(self):
+        item = Item(local_id='123456789')
+        self.assertEqual(item.id, self.item_id)
+
+    def test_no_identifier_error(self):
+        item = Item()
+        with self.assertRaises(NoIdentifierError):
+            item._load_properties()
+
+    def test_multiple_items_error(self):
+        # make item2's local_id the same as item1's
+        idata = {'local_id': '123456789'}
+        res = inv._patch('item', self.item2_id, **idata)
+        self.assertEqual(res.status_code, 202)
+        # now try to GET item based on common local id
+        item = Item(local_id='123456789')
+        with self.assertRaises(NonUniqueIdentifierError) as x:
+            item._load_properties()
+        self.assertEqual(x.exception.identifier, '123456789')
 
 
 if __name__ == '__main__':
