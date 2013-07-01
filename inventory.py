@@ -474,6 +474,7 @@ class Item(object):
                 if len(data['objects']) > 1:
                     raise NonUniqueIdentifierError(self.local_id)
                 elif len(data['objects']) == 0:
+                    print 'no objects'
                     raise Inventory404('Item identified by %s not found' % self.__id)
                 else:
                     data = data['objects'][0]
@@ -499,7 +500,13 @@ class Item(object):
             self.__loaded = True
             self.access_loc = data['access_loc']
         elif response.status_code == 404:
-            raise Inventory404('Item identified by %s not found' % self.__id)
+            # try looking up by local id instead
+            if self.__id and not self.local_id:
+                self.local_id = self.__id
+                self.__id = None
+                self._load_properties()
+            else:
+                raise Inventory404('Item identified by %s not found' % self.__id)
         else:
             raise InventoryError() 
 
