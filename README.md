@@ -31,10 +31,10 @@ Part II - Download the project
 4. Pull down the project from github
 
         (GW staff only)
-        $ git clone git@github.com:gwu-libraries/inventory.git
+        $ git clone git@github.com:gwu-libraries/clint.git
 
         (everyone else)
-        $ git clone https://github.com/gwu-libraries/inventory.git
+        $ git clone https://github.com/gwu-libraries/clint.git
 
 5. Create virtual Python environment for the project
 
@@ -51,13 +51,9 @@ Part II - Download the project
 
 Part III - Configure your instance
 
-8. Copy the local settings template to an active file
+9. Update the values in the settings file to point to your production and sandbox instances of Inventory
 
-        (ENV)$ cp local_settings.py.template local_settings.py
-
-9. Update the values in the local_settings file to point to your production and sandbox instances of Inventory
-
-        (ENV)$ vim local_settings.py
+        (ENV)$ vim settings.py
 
 You're ready to use it
 
