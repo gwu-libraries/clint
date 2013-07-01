@@ -122,7 +122,10 @@ def get_user_input(obj, attr, opts):
         prompt = '%s [Options: %s]: ' % (attr, optlist)
     else:
         prompt = '%s: ' % attr
-    prefill = getattr(obj, attr)
+    if attr in obj.relations:
+        prefill = getattr(obj, attr).id
+    else:
+        prefill = getattr(obj, attr)
     readline.set_startup_hook(lambda: readline.insert_text(prefill))
     try:
         return raw_input(prompt)
