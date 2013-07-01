@@ -61,15 +61,30 @@ def parse_id(location, uri=False):
 
 
 class Inventory404(Exception):
-    pass
+    
+    def __init__(self, msg=''):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
 
 
 class InventoryError(Exception):
-    pass
+    
+    def __init__(self, msg=''):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
 
 
 class NoIdentifierError(Exception):
-    pass
+    
+    def __init__(self, msg=''):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
 
 
 class NonUniqueIdentifierError(Exception):
@@ -93,9 +108,9 @@ class Machine(object):
         self.__id = id
         self.name = name
         self.url = url
-        self.ip = data['ip']
-        self.notes = data['notes']
-        self.access_root = data['access_root']
+        self.ip = ip
+        self.notes = notes
+        self.access_root = access_root
 
     def __str__(self):
         return '<Machine %s>' % (self.__id)
@@ -127,7 +142,7 @@ class Machine(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404()
+            raise Inventory404('Machine identified by %s not found' % self.__id)
         else:
             raise InventoryError()
 
@@ -224,7 +239,7 @@ class Collection(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404()
+            raise Inventory404('Collection identified by %s not found' % self.__id)
         else:
             raise InventoryError()
 
@@ -329,7 +344,7 @@ class Project(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404()
+            raise Inventory404('Project identified by %s not found' % self.__id)
         else:
             raise InventoryError()
 
@@ -456,7 +471,7 @@ class Item(object):
                 if len(data['objects']) > 1:
                     raise NonUniqueIdentifierError(self.local_id)
                 elif len(data['objects']) == 0:
-                    raise Inventory404()
+                    raise Inventory404('Item identified by %s not found' % self.__id)
                 else:
                     data = data['objects'][0]
                     self.__id = data['id']
@@ -481,7 +496,7 @@ class Item(object):
             self.__loaded = True
             self.access_loc = data['access_loc']
         elif response.status_code == 404:
-            raise Inventory404()
+            raise Inventory404('Item identified by %s not found' % self.__id)
         else:
             raise InventoryError() 
 
@@ -640,7 +655,7 @@ class Bag(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404()
+            raise Inventory404('Bag identified by %s not found' % self.__bagname)
         else:
             raise InventoryError()
 
@@ -781,7 +796,7 @@ class BagAction(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404()
+            raise Inventory404('BagAction identified by %s not found' % self.__id)
         else:
             raise InventoryError()
 

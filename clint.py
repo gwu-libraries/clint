@@ -65,9 +65,8 @@ def add(args):
         obj.save()
         print '%s Created!\n' % args.model.capitalize()
         print obj.to_string()
-    except Exception, e:
-        print 'Error creating record!\n', e
-        raise
+    except Inventory404, e:
+        print 'Error creating record: %s' % e.msg
 
 
 def edit(args):
