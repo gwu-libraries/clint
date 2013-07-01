@@ -220,7 +220,8 @@ class Collection(object):
     def __getattr__(self, key):
         if not self.__loaded:
             self._load_properties()
-        if key in self.__class__.__readonly:
+        if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
+            'relations', 'options']:
             return super(Collection, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
@@ -325,7 +326,8 @@ class Project(object):
     def __getattr__(self, key):
         if not self.__loaded:
             self._load_properties()
-        if key in self.__class__.__readonly:
+        if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
+            'relations', 'options']:
             return super(Project, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
@@ -452,7 +454,8 @@ class Item(object):
     def __getattr__(self, key):
         if not self.__loaded:
             self._load_properties()
-        if key in self.__class__.__readonly:
+        if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
+            'relations', 'options']:
             return super(Item, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
@@ -593,7 +596,7 @@ class Bag(object):
     # bagname is readwrite for now because inventory does not autoassign names
     # change this once inventory code has been changed
     __readwrite = ['bagname', 'bag_type', 'path', 'payload', 'machine',
-        'item', 'created', ]
+        'item', 'created']
     __relations = ['machine', 'item']
     __options = {
         'bag_type': {
@@ -633,7 +636,8 @@ class Bag(object):
     def __getattr__(self, key):
         if not self.__loaded:
             self._load_properties()
-        if key in self.__class__.__readonly:
+        if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
+            'relations', 'options']:
             return super(Bag, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
@@ -778,7 +782,8 @@ class BagAction(object):
     def __getattr__(self, key):
         if not self.__loaded:
             self._load_properties()
-        if key in self.__class__.__readonly:
+        if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
+            'relations', 'options']:
             return super(BagAction, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
