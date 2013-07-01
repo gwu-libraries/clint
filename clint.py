@@ -73,6 +73,9 @@ def edit(args):
     try:
         obj = globals()[args.model.capitalize()](args.id)
         print obj.to_string()
+    except Inventory404, e:
+        print 'No record found for %s %s' % (args.model, args.id)
+    try:
         edits = [a for a in obj.readwrite() if getattr(args, a, None) is not None]
         for attr in edits:
             setattr(obj, attr, getattr(args, attr))
@@ -83,10 +86,7 @@ def edit(args):
         print '\n%s Edited!\n' % args.model.capitalize()
         print obj.to_string()
     except Inventory404, e:
-        print 'No record found for %s %s' % (args.model, args.id)
-    except Exception, e:
-        print 'Error editing record!\n', e
-        raise
+        print 'Error editing record: %s' % e.msg
 
 
 def delete(args):
@@ -363,7 +363,7 @@ def main():
     editi.add_argument('--model', default='item')
     # edit bag
     editb = editsubpar.add_parser('bag', help='Edit a bag in the Inventory')
-    editb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
+    editb.add_argument('id', help='Identifier/name of the bag')
     editb.add_argument('-t', '--bagtype', choices=bag_types,
         help='Type of bag')
     editb.add_argument('-p', '--path', help='Path to bag from server root')
