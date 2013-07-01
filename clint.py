@@ -42,10 +42,10 @@ bag_types = ['access', 'preservation', 'export']
 
 def show(args):
     try:
-        if args.id:
+        if args.local_id:
+            obj = globals()[args.model.capitalize()](local_id=args.id)
+        else:
             obj = globals()[args.model.capitalize()](args.id)
-        elif args.local_id:
-            obj = globals()[args.model.capitalize()](local_id=args.local_id)
         print obj.to_string()
     except Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
@@ -71,7 +71,10 @@ def add(args):
 
 def edit(args):
     try:
-        obj = globals()[args.model.capitalize()](args.id)
+        if 'localid' in args and args.localid:
+            obj = globals()[args.model.capitalize()](local_id=args.localid)
+        else:
+            obj = globals()[args.model.capitalize()](args.id)
         print obj.to_string()
     except Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
@@ -105,7 +108,7 @@ def user_build_new_obj(obj, model):
         elif model == 'bag' and attr == 'payload' and obj.payload:
             continue
         else:
-            value = get_user_input(obj, attr, opts)
+            value = get_user_input(obj, attr, opts, no_prefill=True)
         setattr(obj, attr, value)
 
 
@@ -116,16 +119,19 @@ def user_edit_obj(obj):
         setattr(obj, attr, value)
 
 
-def get_user_input(obj, attr, opts):
+def get_user_input(obj, attr, opts, no_prefill=True):
     if opts:
         optlist = ', '.join(['%s=%s' % (k, v) for k, v in opts.items()])
         prompt = '%s [Options: %s]: ' % (attr, optlist)
     else:
         prompt = '%s: ' % attr
-    if attr in obj.relations:
-        prefill = getattr(obj, attr).id
+    if no_prefill:
+        prefill = ''
     else:
-        prefill = getattr(obj, attr)
+        if attr in obj.relations:
+            prefill = getattr(obj, attr).id
+        else:
+            prefill = getattr(obj, attr)
     readline.set_startup_hook(lambda: readline.insert_text(prefill))
     try:
         return raw_input(prompt)
