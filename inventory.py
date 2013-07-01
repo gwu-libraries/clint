@@ -420,11 +420,13 @@ class Item(object):
         return '<Item %s>' % self.__id
 
     def __setattr__(self, key, value):
-        if key in self.__relations and \
-            (isinstance(value, str) or isinstance(value, unicode)):
-            obj = globals()[key.capitalize()](id=value)
-            obj._load_properties()
-            value = obj
+        if key in self.__relations:
+            if value == '':
+                value = None
+            elif (isinstance(value, str) or isinstance(value, unicode)):
+                obj = globals()[key.capitalize()](id=value)
+                obj._load_properties()
+                value = obj
         elif key in self.options().keys() and value in self.options(field=key).values():
             value = self.options(field=key, value=value)
         if key in self.__class__.__readonly:
@@ -458,15 +460,21 @@ class Item(object):
                 else:
                     data = data['objects'][0]
                     self.__id = data['id']
-            collection_id = '/'.join(
-                data['collection'].rstrip('/').split('/')[-2:])
-            project_id = '/'.join(
-                data['project'].rstrip('/').split('/')[-2:])
             self.title = data['title']
             self.local_id = data['local_id']
             self.__created = data['created']
-            self.collection = collection_id
-            self.project = project_id
+            if data['collection']:
+                collection_id = '/'.join(
+                    data['collection'].rstrip('/').split('/')[-2:])
+                self.collection = collection_id
+            else:
+                self.__collection = None
+            if data['project']:
+                project_id = '/'.join(
+                    data['project'].rstrip('/').split('/')[-2:])
+                self.project = project_id
+            else:
+                self.__project = None
             self.original_item_type = data['original_item_type']
             self.__stats = data['stats']
             self.__resource_uri = data['resource_uri']
@@ -517,7 +525,10 @@ class Item(object):
         if not self.__loaded and not self.__id:
             for field in self.__class__.__readwrite:
                 if field in self.__relations:
-                    data[field] = getattr(self, field).resource_uri
+                    try:
+                        data[field] = getattr(self, field).resource_uri
+                    except AttributeError:
+                        data[field] = None
                 else:
                     data[field] = getattr(self, field)
             response = _post('item', **data)
@@ -530,13 +541,15 @@ class Item(object):
         elif self.__loaded:
             for field in vars(self):
                 if field in self.__relations:
-                    data[field] = getattr(self, field).resource_uri
+                    relobj = getattr(self, field)
+                    data[field] = relobj.resource_uri if relobj else None
                 else:
                     data[field] = getattr(self, field)
             response = _put('item', self.id, **data)
             if response.status_code == 204:
                 return self
             else:
+                print 'Error with data: %s\n%s' % (data, response.text)
                 raise InventoryError(response)
         else:
             return self

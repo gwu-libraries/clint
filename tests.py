@@ -170,6 +170,17 @@ class TestInventoryHTTPMethods(unittest.TestCase):
             item._load_properties()
         self.assertEqual(x.exception.identifier, '123456789')
 
+    def test_null_foreign_keys(self):
+        # create an Item with no Collection or Project
+        item = Item(title="test clint item 1", local_id='123456', notes='no matter',
+            original_item_type='2')
+        item.save()
+        self.assertTrue(item.id)
+        item.collection = inv.Collection(id=self.collection_id)
+        item.save()
+        self.assertEqual(item.collection.id, self.collection_id)
+        inv._delete('item', item.id)
+
 
 if __name__ == '__main__':
     unittest.main()

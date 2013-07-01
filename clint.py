@@ -42,7 +42,10 @@ bag_types = ['access', 'preservation', 'export']
 
 def show(args):
     try:
-        obj = globals()[args.model.capitalize()](args.id)
+        if args.id:
+            obj = globals()[args.model.capitalize()](args.id)
+        elif args.local_id:
+            obj = globals()[args.model.capitalize()](local_id=args.local_id)
         print obj.to_string()
     except Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
@@ -261,6 +264,8 @@ def main():
     show_parser.add_argument('model', choices=models,
         help='type of object to be acted on')
     show_parser.add_argument('id', help='identifier of the object')
+    show_parser.add_argument('-l', '--local_id', action="store_true",
+        help='Set if you wish to use a local identifier (barcode)')
     show_parser.set_defaults(func=show)
 
     # parser for the "add" command
@@ -346,7 +351,7 @@ def main():
     # edit item
     editi = editsubpar.add_parser('item',
         help='Edit an item in the Inventory')
-    editi.add_argument('id', help='identifier of the item')
+    editi.add_argument('-i', '--id', help='identifier of the item')
     editi.add_argument('-t', '--title', help='Title of the item')
     editi.add_argument('-l', '--localid', help='Alt/local ID of the item')
     editi.add_argument('-p', '--project',
