@@ -154,7 +154,7 @@ def get_user_input(obj, attr, opts, no_prefill=False):
         prompt = '%s [Options: %s]: ' % (attr, optlist)
     else:
         prompt = '%s: ' % attr
-    if no_prefill:
+    if no_prefill or not getattr(obj, attr):
         prefill = ''
     else:
         if attr in obj.relations:
