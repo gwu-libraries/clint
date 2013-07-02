@@ -315,11 +315,13 @@ class Project(object):
         return '<Project %s>' % self.id
 
     def __setattr__(self, key, value):
-        if key in self.__relations and \
-            (isinstance(value, str) or isinstance(value, unicode)):
-            obj = globals()[key.capitalize()](id=value)
-            obj._load_properties()
-            value = obj
+        if key in self.__relations:
+            if value == '':
+                value = None
+            elif (isinstance(value, str) or isinstance(value, unicode)):
+                obj = globals()[key.capitalize()](id=value)
+                obj._load_properties()
+                value = obj
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
         else:
@@ -339,11 +341,14 @@ class Project(object):
         response = _get('project', self.__id)
         if response.status_code == 200:
             data = response.json()
-            collection_id = '/'.join(
-                data['collection'].rstrip('/').split('/')[-2:])
+            if data['collection']:
+                collection_id = '/'.join(
+                    data['collection'].rstrip('/').split('/')[-2:])
+                self.collection = collection_id
+            else:
+                self.__collection = None
             self.name = data['name']
             self.__created = data['created']
-            self.collection = collection_id
             self.__stats = data['stats']
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
@@ -367,7 +372,10 @@ class Project(object):
         if not self.__loaded and not self.__id:
             for field in self.__class__.__readwrite:
                 if field in self.__relations:
-                    data[field] = getattr(self, field).resource_uri
+                    try:
+                        data[field] = getattr(self, field).resource_uri
+                    except AttributeError:
+                        data[field] = None
                 else:
                     data[field] = getattr(self, field)
             response = _post('project', **data)
@@ -380,7 +388,8 @@ class Project(object):
         elif self.__loaded:
             for field in vars(self):
                 if field in self.__relations:
-                    data[field] = getattr(self, field).resource_uri
+                    relobj = getattr(self, field)
+                    data[field] = relobj.resource_uri if relobj else None
                 else:
                     data[field] = getattr(self, field)
             response = _put('project', self.id, **data)
