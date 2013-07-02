@@ -101,6 +101,7 @@ class Machine(object):
 
     __readonly = ['id', 'resource_uri']
     __readwrite = ['name', 'url', 'ip', 'notes', 'access_root']
+    __relations = []
 
     def __init__(self, id=None, name='', url='', ip='', notes='',
             access_root=''):
@@ -196,6 +197,7 @@ class Collection(object):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
     __readwrite = ['name', 'description', 'manager', 'access_loc']
+    __relations = []
 
     def __init__(self, id=None, name='', description='', manager='',
         created=None, access_loc='', stats=None):

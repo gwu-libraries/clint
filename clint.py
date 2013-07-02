@@ -10,7 +10,7 @@ import shutil
 import bagit
 
 from inventory import Machine, Collection, Project, Item, Bag, BagAction
-from inventory import Inventory404, _delete
+import inventory as inv
 import settings
 
 
@@ -40,6 +40,34 @@ orig_item_types = ['book', 'microfilm', 'audio', 'video', 'mixed',
 bag_types = ['access', 'preservation', 'export']
 
 
+def ls(args):
+    # add params to filter by foreignkey models
+    params = {}
+    for model in models:
+        if model in args:
+            val = getattr(args, model)
+            if val is not None and val != '':
+                params[model] = val
+    res = inv._get(model=args.model, params=params)
+    objects = res.json().get('objects', None)
+    if not objects:
+        print 'No %ss found' % args.model
+    else:
+        for index, obj in enumerate(objects, start=1):
+            print '-----%s-----' % index
+            if 'bagname' in obj.keys():
+                print 'bagname: %s' % obj.pop('bagname')
+            else:
+                print 'id: %s'  % obj.pop('id')
+            if 'name' in obj.keys():
+                print 'name: %s' % obj.pop('name')
+            elif 'title' in obj.keys():
+                print 'title: %s'  % obj.pop('title')
+            for k in sorted(obj.keys()):
+                print '%s: %s' % (k, obj[k])
+        print '----------\n%s total %ss' % (len(objects),args.model)
+
+
 def show(args):
     try:
         if args.local_id:
@@ -47,7 +75,7 @@ def show(args):
         else:
             obj = globals()[args.model.capitalize()](args.id)
         print obj.to_string()
-    except Inventory404, e:
+    except inv.Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
     except Exception, e:
         print 'Error fetching data!\n', e
@@ -65,7 +93,7 @@ def add(args):
         obj.save()
         print '%s Created!\n' % args.model.capitalize()
         print obj.to_string()
-    except Inventory404, e:
+    except inv.Inventory404, e:
         print 'Error creating record: %s' % e.msg
 
 
@@ -76,8 +104,9 @@ def edit(args):
         else:
             obj = globals()[args.model.capitalize()](args.id)
         print obj.to_string()
-    except Inventory404, e:
+    except inv.Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
+        return
     try:
         edits = [a for a in obj.readwrite() if getattr(args, a, None) is not None]
         for attr in edits:
@@ -88,12 +117,12 @@ def edit(args):
         obj.save()
         print '\n%s Edited!\n' % args.model.capitalize()
         print obj.to_string()
-    except Inventory404, e:
+    except inv.Inventory404, e:
         print 'Error editing record: %s' % e.msg
 
 
 def delete(args):
-    response = _delete(args.model, args.id)
+    import inventory as inv
     if response.status_code == 204:
         print 'Successful deletion of %s %s' % (args.model, args.id)
     else:
@@ -119,7 +148,7 @@ def user_edit_obj(obj):
         setattr(obj, attr, value)
 
 
-def get_user_input(obj, attr, opts, no_prefill=True):
+def get_user_input(obj, attr, opts, no_prefill=False):
     if opts:
         optlist = ', '.join(['%s=%s' % (k, v) for k, v in opts.items()])
         prompt = '%s [Options: %s]: ' % (attr, optlist)
@@ -276,6 +305,57 @@ def main():
         help='Set if you wish to use a local identifier (barcode)')
     show_parser.set_defaults(func=show)
 
+    #parser for the "list" command
+    list_parser = subparsers.add_parser('list', help='List objects in the inventory')
+    list_parser.set_defaults(func=ls)
+    # add subparsers for each kind of object
+    listsubpar = list_parser.add_subparsers()
+    # list collection
+    listc = listsubpar.add_parser('collection', help='List collections in Inventory')
+    listc.add_argument('-n', '--name', help='Name of the Collection')
+    listc.add_argument('-d', '--description',
+        help='Description of the Collection')
+    listc.add_argument('-m', '--manager', help='Manager of the Collection')
+    listc.add_argument('--model', default='collection')
+    # add project
+    listp = listsubpar.add_parser('project', help='Add a project to Inventory')
+    listp.add_argument('-n', '--name', help='Name of the project')
+    listp.add_argument('-m', '--manager', help='Manager of the project')
+    listp.add_argument('-c', '--collection',
+        help='ID of the collection this project feeds')
+    listp.add_argument('--model', default='project')
+    # add item
+    listi = listsubpar.add_parser('item', help='Add an item to Inventory')
+    listi.add_argument('-t', '--title', help='Title of the item')
+    listi.add_argument('-l', '--localid', help='Alt/local ID of the item')
+    listi.add_argument('-p', '--project',
+        help='Project this item is associated with')
+    listi.add_argument('-c', '--collection',
+        help='Collection this item is associated with')
+    listi.add_argument('-o', '--original-item-type', choices=orig_item_types,
+        help='The type of object this digital item came from')
+    listi.add_argument('-n', '--notes', help='Notes about the item')
+    listi.add_argument('--model', default='item')
+    # add bag
+    listb = listsubpar.add_parser('bag', help='Add a bag to the Inventory')
+    listb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
+    listb.add_argument('-t', '--bagtype', choices=bag_types,
+        help='Type of bag')
+    listb.add_argument('-p', '--path', help='Path to bag from server root')
+    listb.add_argument('-m', '--machine', help='Machine this bag is stored on')
+    listb.add_argument('-i', '--item', help='Item this bag is associated with')
+    listb.add_argument('-c', '--created',
+        help='Timestamp when this bag was created')
+    listb.add_argument('--model', default='bag')
+    # add machine
+    listm = listsubpar.add_parser('machine',
+        help='Add a machine to the Inventory')
+    listm.add_argument('-n', '--name', help='Name of the machine')
+    listm.add_argument('-u', '--url', help='URL of the machine')
+    listm.add_argument('-i', '--ip', help='IP address of the machine')
+    listm.add_argument('-o', '--notes', help='Notes about the machine')
+    listm.add_argument('--model', default='machine')
+
     # parser for the "add" command
     add_parser = subparsers.add_parser('add',
         help='Add a new object to the Inventory')
@@ -296,8 +376,6 @@ def main():
     addp.add_argument('-m', '--manager', help='Manager of the project')
     addp.add_argument('-c', '--collection',
         help='ID of the collection this project feeds')
-    addp.add_argument('-s', '--start-date', help='Start date of the project')
-    addp.add_argument('-e', '--end-date', help='End date of the project')
     addp.add_argument('--model', default='project')
     # add item
     addi = addsubpar.add_parser('item', help='Add an item to Inventory')
@@ -328,6 +406,8 @@ def main():
         help='Add a machine to the Inventory')
     addm.add_argument('-n', '--name', help='Name of the machine')
     addm.add_argument('-u', '--url', help='URL of the machine')
+    addm.add_argument('-i', '--ip', help='IP address of the machine')
+    addm.add_argument('-o', '--notes', help='Notes about the machine')
     addm.add_argument('--model', default='machine')
 
     # parser for the "edit" command
@@ -353,8 +433,6 @@ def main():
     editp.add_argument('-m', '--manager', help='Manager of the project')
     editp.add_argument('-c', '--collection',
         help='ID of the collection this project feeds')
-    editp.add_argument('-s', '--start-date', help='Start date of the project')
-    editp.add_argument('-e', '--end-date', help='End date of the project')
     editp.add_argument('--model', default='project')
     # edit item
     editi = editsubpar.add_parser('item',
@@ -388,6 +466,8 @@ def main():
     editm.add_argument('id', help='identifier of the machine')
     editm.add_argument('-n', '--name', help='Name of the machine')
     editm.add_argument('-u', '--url', help='URL of the machine')
+    editm.add_argument('-i', '--ip', help='IP address of the machine')
+    editm.add_argument('-o', '--notes', help='Notes about the machine')
     editm.add_argument('--model', default='machine')
 
     # parser for the "delete" command
