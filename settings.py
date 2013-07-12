@@ -6,19 +6,26 @@ INVENTORY_CREDENTIALS = {
     'apikey': '',
     'apiversion': '',
     'url': '',
-    'port': '',
-    'verify_ssl_cert': True
+    'verify_ssl_cert': False
 }
 
 inventory_sandbox = {
     'user': '',
     'apikey': '',
     'url': '',
-    'port': '',
-    'verify_ssl_cert': True
+    'verify_ssl_cert': False
 }
 
 try:
     from local_settings import *
 except ImportError:
     pass
+
+#Example settings
+#INVENTORY_CREDENTIALS = {
+#        'user': 'admin',
+#        'apikey': 'b531f6599f78asbf279fd38c4665sd76f8794207a',
+#        'apiversion': 'v1',
+#        'url': 'https://inventory.example.com'  #URL should be without the trailing slash
+#        'verify_ssl_cert': False
+#}
