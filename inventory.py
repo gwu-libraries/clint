@@ -4,7 +4,7 @@ import requests
 from settings import INVENTORY_CREDENTIALS as creds
 
 
-baseurl = '%s:%s/api/%s' % (creds['url'], creds['port'], creds['apiversion'])
+baseurl = '%s/api/%s' % (creds['url'], creds['apiversion'])
 auth_header = {'Authorization': 'ApiKey %s:%s' % (creds['user'],
     creds['apikey']), 'Content-Type': 'application/json'}
 
