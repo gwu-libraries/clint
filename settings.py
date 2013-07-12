@@ -26,6 +26,8 @@ except ImportError:
 #        'user': 'admin',
 #        'apikey': 'b531f6599f78asbf279fd38c4665sd76f8794207a',
 #        'apiversion': 'v1',
-#        'url': 'https://inventory.example.com'  #URL should be without the trailing slash and must have the port number if different from default port 80
+#        'url': 'https://inventory.example.com'
+                    #URL should be without the trailing slash and must have
+#                       #the port number if different from default port 80
 #        'verify_ssl_cert': False
 #}
