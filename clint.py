@@ -122,7 +122,7 @@ def edit(args):
 
 
 def delete(args):
-    import inventory as inv
+    response = inv._delete(args.model, args.id)
     if response.status_code == 204:
         print 'Successful deletion of %s %s' % (args.model, args.id)
     else:
