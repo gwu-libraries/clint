@@ -1,4 +1,5 @@
 import json
+
 import requests
 
 from settings import INVENTORY_CREDENTIALS as creds
@@ -6,26 +7,27 @@ from settings import INVENTORY_CREDENTIALS as creds
 
 baseurl = '%s/api/%s' % (creds['url'], creds['apiversion'])
 auth_header = {'Authorization': 'ApiKey %s:%s' % (creds['user'],
-    creds['apikey']), 'Content-Type': 'application/json'}
+               creds['apikey']), 'Content-Type': 'application/json'}
 
 # Base HTTP methods
 
+
 def _get(model, pk=None, params={}):
     params.update({'format': 'json', 'username': creds['user'],
-        'api_key': creds['apikey']})
+                   'api_key': creds['apikey']})
     if pk:
         url = '%s/%s/%s/' % (baseurl, model, pk)
     else:
         url = '%s/%s/' % (baseurl, model)
     return requests.get(url, params=params, headers=auth_header,
-        verify=creds['verify_ssl_cert'])
+                        verify=creds['verify_ssl_cert'])
 
 
 def _post(model, **data):
     # POST is for new items, not changes. Use PUT or PATCH for changes
     url = '%s/%s/' % (baseurl, model)
     return requests.post(url, data=json.dumps(data), headers=auth_header,
-        verify=creds['verify_ssl_cert'])
+                         verify=creds['verify_ssl_cert'])
 
 
 def _put(model, pk, **data):
@@ -33,21 +35,22 @@ def _put(model, pk, **data):
     # use PATCH to change one or two fields without setting them all
     url = '%s/%s/%s/' % (baseurl, model, pk)
     return requests.put(url, data=json.dumps(data), headers=auth_header,
-        verify=creds['verify_ssl_cert'])
+                        verify=creds['verify_ssl_cert'])
 
 
 def _patch(model, pk, **data):
     url = '%s/%s/%s/' % (baseurl, model, pk)
     return requests.patch(url, data=json.dumps(data), headers=auth_header,
-        verify=creds['verify_ssl_cert'])
+                          verify=creds['verify_ssl_cert'])
 
 
 def _delete(model, pk):
     url = '%s/%s/%s/' % (baseurl, model, pk)
     return requests.delete(url, headers=auth_header,
-        verify=creds['verify_ssl_cert'])
+                           verify=creds['verify_ssl_cert'])
 
 # helper functions
+
 
 def parse_id(location, uri=False):
     # Parsea an object id from the 'location' returned by API 201 response.
@@ -61,7 +64,7 @@ def parse_id(location, uri=False):
 
 
 class Inventory404(Exception):
-    
+
     def __init__(self, msg=''):
         self.msg = msg
 
@@ -70,7 +73,7 @@ class Inventory404(Exception):
 
 
 class InventoryError(Exception):
-    
+
     def __init__(self, msg=''):
         self.msg = msg
 
@@ -79,7 +82,7 @@ class InventoryError(Exception):
 
 
 class NoIdentifierError(Exception):
-    
+
     def __init__(self, msg=''):
         self.msg = msg
 
@@ -96,22 +99,21 @@ class NonUniqueIdentifierError(Exception):
         return repr(self.identifier)
 
 
-
 class Machine(object):
 
     __readonly = ['id', 'resource_uri']
-    __readwrite = ['name', 'url', 'ip', 'notes', 'access_root']
+    __readwrite = ['name', 'url', 'ip', 'notes', 'www_root']
     __relations = []
 
     def __init__(self, id=None, name='', url='', ip='', notes='',
-            access_root=''):
+                 www_root=''):
         self.__loaded = False
         self.__id = id
         self.name = name
         self.url = url
         self.ip = ip
         self.notes = notes
-        self.access_root = access_root
+        self.www_root = www_root
 
     def __str__(self):
         return '<Machine %s>' % (self.__id)
@@ -127,7 +129,7 @@ class Machine(object):
             self._load_properties()
         if key in self.__class__.__readonly:
             return super(Machine, self).__getattribute__("_%s__%s" %
-                (self.__class__.__name__, key))
+                         (self.__class__.__name__, key))
         else:
             return super(Machine, self).__getattribute__(key)
 
@@ -139,11 +141,12 @@ class Machine(object):
             self.url = data['url']
             self.ip = data['ip']
             self.notes = data['notes']
-            self.access_root = data['access_root']
+            self.www_root = data['www_root']
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404('Machine identified by %s not found' % self.__id)
+            raise Inventory404('Machine identified by %s not found' %
+                               self.__id)
         else:
             raise InventoryError()
 
@@ -189,7 +192,7 @@ class Machine(object):
         lines.append('%s: %s' % ('url'.rjust(11), self.url))
         lines.append('%s: %s' % ('ip'.rjust(11), self.ip))
         lines.append('%s: %s' % ('notes'.rjust(11), self.notes))
-        lines.append('%s: %s' % ('access root'.rjust(11), self.access_root))
+        lines.append('%s: %s' % ('access root'.rjust(11), self.www_root))
         return '\n'.join(lines)
 
 
@@ -200,7 +203,7 @@ class Collection(object):
     __relations = []
 
     def __init__(self, id=None, name='', description='', manager='',
-        created=None, access_loc='', stats=None):
+                 created=None, access_loc='', stats=None):
         self.__loaded = False
         self.__id = id
         self.name = name
@@ -223,9 +226,9 @@ class Collection(object):
         if not self.__loaded:
             self._load_properties()
         if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
-            'relations', 'options']:
+                                                       'relations', 'options']:
             return super(Collection, self).__getattribute__("_%s__%s" %
-                (self.__class__.__name__, key))
+                         (self.__class__.__name__, key))
         else:
             return super(Collection, self).__getattribute__(key)
 
@@ -242,7 +245,8 @@ class Collection(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404('Collection identified by %s not found' % self.__id)
+            raise Inventory404('Collection identified by %s not found' %
+                               self.__id)
         else:
             raise InventoryError()
 
@@ -300,7 +304,7 @@ class Project(object):
     __relations = ['collection']
 
     def __init__(self, id=None, name='', manager='', created=None, stats=None,
-        collection=None, start_date='', end_date=''):
+                 collection=None, start_date='', end_date=''):
         self.__loaded = False
         self.__id = id
         self.name = name
@@ -331,7 +335,7 @@ class Project(object):
         if not self.__loaded:
             self._load_properties()
         if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
-            'relations', 'options']:
+                                                       'relations', 'options']:
             return super(Project, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
@@ -353,7 +357,8 @@ class Project(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404('Project identified by %s not found' % self.__id)
+            raise Inventory404('Project identified by %s not found' %
+                               self.__id)
         else:
             raise InventoryError()
 
@@ -416,7 +421,7 @@ class Item(object):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
     __readwrite = ['title', 'local_id', 'notes', 'project', 'collection',
-        'original_item_type', 'access_loc']
+                   'original_item_type', 'access_loc']
     __relations = ['collection', 'project']
     __options = {
         'original_item_type': {
@@ -426,12 +431,12 @@ class Item(object):
             '4': 'video',
             '5': 'mixed',
             '6': 'other'
-            }
         }
+    }
 
     def __init__(self, id=None, title='', local_id='', notes='', stats=None,
-        project=None, original_item_type='', created=None, collection=None,
-        access_loc=''):
+                 project=None, original_item_type='', created=None,
+                 collection=None, access_loc=''):
         self.__loaded = False
         self.__id = id
         self.title = title
@@ -455,7 +460,8 @@ class Item(object):
                 obj = globals()[key.capitalize()](id=value)
                 obj._load_properties()
                 value = obj
-        elif key in self.options().keys() and value in self.options(field=key).values():
+        elif key in self.options().keys() \
+                and value in self.options(field=key).values():
             value = self.options(field=key, value=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
@@ -466,7 +472,7 @@ class Item(object):
         if not self.__loaded:
             self._load_properties()
         if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
-            'relations', 'options']:
+                                                       'relations', 'options']:
             return super(Item, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
@@ -486,7 +492,8 @@ class Item(object):
                     raise NonUniqueIdentifierError(self.local_id)
                 elif len(data['objects']) == 0:
                     print 'no objects'
-                    raise Inventory404('Item identified by %s not found' % self.__id)
+                    raise Inventory404('Item identified by %s not found' %
+                                       self.__id)
                 else:
                     data = data['objects'][0]
                     self.__id = data['id']
@@ -517,13 +524,14 @@ class Item(object):
                 self.__id = None
                 self._load_properties()
             else:
-                raise Inventory404('Item identified by %s not found' % self.__id)
+                raise Inventory404('Item identified by %s not found' %
+                                   self.__id)
         else:
-            raise InventoryError() 
+            raise InventoryError()
 
     def readwrite(self):
         return self.__readwrite
-    
+
     def writeopts(self):
         output = []
         for attr in self.__class__.__readwrite:
@@ -533,7 +541,7 @@ class Item(object):
                 opts = None
             output.append((attr, opts))
         return output
-    
+
     def options(self, field=None, key=None, value=None):
         # if not arguments sent, output entire dictionary
         if field is None and key is None and value is None:
@@ -601,7 +609,8 @@ class Item(object):
         lines.append('%s: %s' % ('collection'.rjust(14), self.collection))
         lines.append('%s: %s' % ('project'.rjust(14), self.project))
         lines.append('%s: %s' % ('orig item type'.rjust(14),
-            self.options('original_item_type', self.original_item_type)))
+                     self.options('original_item_type',
+                     self.original_item_type)))
         lines.append('%s: %s' % ('access_loc'.rjust(14), self.access_loc))
         lines.append('%s: %s' % ('notes'.rjust(14), self.notes))
         lines.append('%s: %s' % ('stats'.rjust(14), self.stats))
@@ -614,18 +623,18 @@ class Bag(object):
     # bagname is readwrite for now because inventory does not autoassign names
     # change this once inventory code has been changed
     __readwrite = ['bagname', 'bag_type', 'path', 'payload', 'machine',
-        'item', 'created']
+                   'item', 'created']
     __relations = ['machine', 'item']
     __options = {
         'bag_type': {
             '1': 'Access',
             '2': 'Preservation',
             '3': 'Export'
-            }
         }
+    }
 
     def __init__(self, bagname=None, created=None, item=None, machine=None,
-        path='', bag_type='', payload=''):
+                 path='', bag_type='', payload=''):
         self.__loaded = False
         self.bagname = bagname
         self.created = created
@@ -639,12 +648,13 @@ class Bag(object):
         return '<Bag %s>' % self.bagname
 
     def __setattr__(self, key, value):
-        if key in self.__relations and \
-            (isinstance(value, str) or isinstance(value, unicode)):
+        if key in self.__relations \
+                and (isinstance(value, str) or isinstance(value, unicode)):
             obj = globals()[key.capitalize()](id=value)
             obj._load_properties()
             value = obj
-        elif key in self.options().keys() and value in self.options(field=key).values():
+        elif key in self.options().keys() \
+                and value in self.options(field=key).values():
             value = self.options(field=key, value=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
@@ -655,7 +665,7 @@ class Bag(object):
         if not self.__loaded:
             self._load_properties()
         if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
-            'relations', 'options']:
+                                                       'relations', 'options']:
             return super(Bag, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
@@ -677,7 +687,8 @@ class Bag(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404('Bag identified by %s not found' % self.__bagname)
+            raise Inventory404('Bag identified by %s not found' %
+                               self.__bagname)
         else:
             raise InventoryError()
 
@@ -751,7 +762,7 @@ class Bag(object):
         lines = ['--Bag--'.rjust(12)]
         lines.append('%s: %s' % ('bagname'.rjust(8), self.bagname))
         lines.append('%s: %s' % ('bag type'.rjust(8),
-            self.options('bag_type', self.bag_type)))
+                     self.options('bag_type', self.bag_type)))
         lines.append('%s: %s' % ('created'.rjust(8), self.created))
         lines.append('%s: %s' % ('item'.rjust(8), self.item))
         lines.append('%s: %s' % ('machine'.rjust(8), self.machine))
@@ -785,12 +796,13 @@ class BagAction(object):
         return '<BagAction %s>' % self.__id
 
     def __setattr__(self, key, value):
-        if key in self.__relations and \
-            (isinstance(value, str) or isinstance(value, unicode)):
+        if key in self.__relations \
+                and (isinstance(value, str) or isinstance(value, unicode)):
             obj = globals()[key.capitalize()](value)
             obj._load_properties()
             value = obj
-        elif key in self.options().keys() and value in self.options(field=key).values():
+        elif key in self.options().keys() \
+                and value in self.options(field=key).values():
             value = self.options(field=key, value=value)
         if key in self.__class__.__readonly:
             raise AttributeError("The attribute %s is read-only." % key)
@@ -801,7 +813,7 @@ class BagAction(object):
         if not self.__loaded:
             self._load_properties()
         if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
-            'relations', 'options']:
+                                                       'relations', 'options']:
             return super(BagAction, self).__getattribute__("_%s__%s" %
                 (self.__class__.__name__, key))
         else:
@@ -819,7 +831,8 @@ class BagAction(object):
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
-            raise Inventory404('BagAction identified by %s not found' % self.__id)
+            raise Inventory404('BagAction identified by %s not found' %
+                               self.__id)
         else:
             raise InventoryError()
 
@@ -894,7 +907,7 @@ class BagAction(object):
         lines.append('%s: %s' % ('id'.rjust(8), self.id))
         lines.append('%s: %s' % ('bag'.rjust(8), self.bag))
         lines.append('%s: %s' % ('action'.rjust(8),
-            self.options('action', self.action)))
+                     self.options('action', self.action)))
         lines.append('%s: %s' % ('timestamp'.rjust(8), self.timestamp))
         lines.append('%s: %s' % ('note'.rjust(8), self.note))
         return '\n'.join(lines)
