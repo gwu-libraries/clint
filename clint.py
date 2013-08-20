@@ -157,7 +157,7 @@ def get_user_input(obj, attr, opts, no_prefill=False):
     if no_prefill or not getattr(obj, attr):
         prefill = ''
     else:
-        if attr in obj.relations:
+        if hasattr(obj, 'relations') and attr in obj.relations:
             prefill = getattr(obj, attr).id
         else:
             prefill = getattr(obj, attr)
