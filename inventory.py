@@ -100,18 +100,18 @@ class NonUniqueIdentifierError(Exception):
 class Machine(object):
 
     __readonly = ['id', 'resource_uri']
-    __readwrite = ['name', 'url', 'ip', 'notes', 'access_root']
+    __readwrite = ['name', 'url', 'ip', 'notes', 'www_root']
     __relations = []
 
     def __init__(self, id=None, name='', url='', ip='', notes='',
-            access_root=''):
+            www_root=''):
         self.__loaded = False
         self.__id = id
         self.name = name
         self.url = url
         self.ip = ip
         self.notes = notes
-        self.access_root = access_root
+        self.www_root = www_root
 
     def __str__(self):
         return '<Machine %s>' % (self.__id)
@@ -139,7 +139,7 @@ class Machine(object):
             self.url = data['url']
             self.ip = data['ip']
             self.notes = data['notes']
-            self.access_root = data['access_root']
+            self.www_root = data['www_root']
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
@@ -189,7 +189,7 @@ class Machine(object):
         lines.append('%s: %s' % ('url'.rjust(11), self.url))
         lines.append('%s: %s' % ('ip'.rjust(11), self.ip))
         lines.append('%s: %s' % ('notes'.rjust(11), self.notes))
-        lines.append('%s: %s' % ('access root'.rjust(11), self.access_root))
+        lines.append('%s: %s' % ('www root'.rjust(11), self.www_root))
         return '\n'.join(lines)
 
 
