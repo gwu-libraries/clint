@@ -622,7 +622,7 @@ class Bag(object):
     __readonly = ['resource_uri']
     # bagname is readwrite for now because inventory does not autoassign names
     # change this once inventory code has been changed
-    __readwrite = ['bagname', 'bag_type', 'path', 'payload', 'machine',
+    __readwrite = ['bagname', 'bag_type', 'absolute_filesystem_path', 'payload', 'machine',
                    'item', 'created']
     __relations = ['machine', 'item']
     __options = {
@@ -634,12 +634,12 @@ class Bag(object):
     }
 
     def __init__(self, bagname=None, created=None, item=None, machine=None,
-                 path='', bag_type='', payload=''):
+                 absolute_filesystem_path='', bag_type='', payload=''):
         self.__loaded = False
         self.bagname = bagname
         self.created = created
         self.bag_type = bag_type
-        self.path = path
+        self.absolute_filesystem_path = absolute_filesystem_path
         self.payload = payload
         self.machine = machine
         self.item = item
@@ -682,7 +682,7 @@ class Bag(object):
             self.bag_type = data['bag_type']
             self.item = item_id
             self.machine = machine_id
-            self.path = data['path']
+            self.absolute_filesystem_path = data['absolute_filesystem_path']
             self.payload = data['payload']
             self.__resource_uri = data['resource_uri']
             self.__loaded = True
@@ -766,7 +766,7 @@ class Bag(object):
         lines.append('%s: %s' % ('created'.rjust(8), self.created))
         lines.append('%s: %s' % ('item'.rjust(8), self.item))
         lines.append('%s: %s' % ('machine'.rjust(8), self.machine))
-        lines.append('%s: %s' % ('path'.rjust(8), self.path))
+        lines.append('%s: %s' % ('absolute_filesystem_path'.rjust(8), self.absolute_filesystem_path))
         #lines.append('%s: %s' % ('payload'.rjust(11), self.__payload))
         return '\n'.join(lines)
 
