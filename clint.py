@@ -29,7 +29,7 @@ Managing Bags
 -------------
 bag <dir>
 rebag <dir>
-copy <id> 
+copy <id>
 move <id>
 validate <id>
 '''
@@ -99,8 +99,8 @@ def add(args):
 
 def edit(args):
     try:
-        if 'localid' in args and args.localid:
-            obj = globals()[args.model.capitalize()](local_id=args.localid)
+        if 'local_id' in args and args.local_id:
+            obj = globals()[args.model.capitalize()](local_id=args.local_id)
         else:
             obj = globals()[args.model.capitalize()](args.id)
         print obj.to_string()
@@ -327,7 +327,7 @@ def main():
     # add item
     listi = listsubpar.add_parser('item', help='Add an item to Inventory')
     listi.add_argument('-t', '--title', help='Title of the item')
-    listi.add_argument('-l', '--localid', help='Alt/local ID of the item')
+    listi.add_argument('-l', '--local_id', help='Alt/local ID of the item')
     listi.add_argument('-p', '--project',
         help='Project this item is associated with')
     listi.add_argument('-c', '--collection',
@@ -380,7 +380,7 @@ def main():
     # add item
     addi = addsubpar.add_parser('item', help='Add an item to Inventory')
     addi.add_argument('-t', '--title', help='Title of the item')
-    addi.add_argument('-l', '--localid', help='Alt/local ID of the item')
+    addi.add_argument('-l', '--local_id', help='Alt/local ID of the item')
     addi.add_argument('-p', '--project',
         help='Project this item is associated with')
     addi.add_argument('-c', '--collection',
@@ -439,7 +439,7 @@ def main():
         help='Edit an item in the Inventory')
     editi.add_argument('-i', '--id', help='identifier of the item')
     editi.add_argument('-t', '--title', help='Title of the item')
-    editi.add_argument('-l', '--localid', help='Alt/local ID of the item')
+    editi.add_argument('-l', '--local_id', help='Alt/local ID of the item')
     editi.add_argument('-p', '--project',
         help='Project this item is associated with')
     editi.add_argument('-c', '--collection',
