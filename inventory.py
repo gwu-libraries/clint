@@ -106,7 +106,7 @@ class Machine(object):
     __relations = []
 
     def __init__(self, id=None, name='', url='', ip='', notes='',
-            www_root=''):
+                 www_root=''):
         self.__loaded = False
         self.__id = id
         self.name = name
@@ -199,16 +199,17 @@ class Machine(object):
 class Collection(object):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
-    __readwrite = ['name', 'description', 'manager', 'access_loc']
+    __readwrite = ['name', 'local_id', 'description', 'contact_person', 'access_loc']
     __relations = []
 
-    def __init__(self, id=None, name='', description='', manager='',
+    def __init__(self, id=None, name='', local_id='', description='', contact_person='',
                  created=None, access_loc='', stats=None):
         self.__loaded = False
         self.__id = id
         self.name = name
+        self.local_id = local_id
         self.description = description
-        self.manager = manager
+        self.contact_person = contact_person
         self.access_loc = access_loc
         self.__created = created
         self.__stats = stats
@@ -237,8 +238,9 @@ class Collection(object):
         if response.status_code == 200:
             data = response.json()
             self.name = data['name']
+            self.local_id = data['local_id']
             self.description = data['description']
-            self.manager = data['manager']
+            self.contact_person = data['contact_person']
             self.access_loc = data['access_loc']
             self.__created = data['created']
             self.__stats = data['stats']
@@ -286,14 +288,15 @@ class Collection(object):
     def to_string(self):
         if not self.__loaded:
             self._load_properties()
-        lines = ['--Collection--'.rjust(19)]
-        lines.append('%s: %s' % ('id'.rjust(11), self.id))
-        lines.append('%s: %s' % ('name'.rjust(11), self.name))
-        lines.append('%s: %s' % ('created'.rjust(11), self.created))
-        lines.append('%s: %s' % ('manager'.rjust(11), self.manager))
-        lines.append('%s: %s' % ('description'.rjust(11), self.description))
-        lines.append('%s: %s' % ('access_loc'.rjust(11), self.access_loc))
-        lines.append('%s: %s' % ('stats'.rjust(11), self.stats))
+        lines = ['--Collection--'.rjust(23)]
+        lines.append('%s: %s' % ('id'.rjust(15), self.id))
+        lines.append('%s: %s' % ('name'.rjust(15), self.name))
+        lines.append('%s: %s' % ('local_id'.rjust(15), self.local_id))
+        lines.append('%s: %s' % ('created'.rjust(15), self.created))
+        lines.append('%s: %s' % ('contact_person'.rjust(15), self.contact_person))
+        lines.append('%s: %s' % ('description'.rjust(15), self.description))
+        lines.append('%s: %s' % ('access_loc'.rjust(15), self.access_loc))
+        lines.append('%s: %s' % ('stats'.rjust(15), self.stats))
         return '\n'.join(lines)
 
 
@@ -303,13 +306,12 @@ class Project(object):
     __readwrite = ['name', 'collection']
     __relations = ['collection']
 
-    def __init__(self, id=None, name='', manager='', created=None, stats=None,
+    def __init__(self, id=None, name='', created=None, stats=None,
                  collection=None, start_date='', end_date=''):
         self.__loaded = False
         self.__id = id
         self.name = name
         self.__created = created
-        self.manager = manager
         self.start_date = start_date
         self.end_date = end_date
         self.__stats = stats
@@ -619,7 +621,7 @@ class Item(object):
 
 class Bag(object):
 
-    __readonly = ['resource_uri']
+    __readonly = ['id', 'resource_uri']
     # bagname is readwrite for now because inventory does not autoassign names
     # change this once inventory code has been changed
     __readwrite = ['bagname', 'bag_type', 'absolute_filesystem_path', 'payload', 'machine',
@@ -633,9 +635,10 @@ class Bag(object):
         }
     }
 
-    def __init__(self, bagname=None, created=None, item=None, machine=None,
+    def __init__(self, id=None, bagname=None, created=None, item=None, machine=None,
                  absolute_filesystem_path='', bag_type='', payload=''):
         self.__loaded = False
+        self.__id = id
         self.bagname = bagname
         self.created = created
         self.bag_type = bag_type
@@ -645,7 +648,7 @@ class Bag(object):
         self.item = item
 
     def __str__(self):
-        return '<Bag %s>' % self.bagname
+        return '<Bag %s - %s>' % (str(self.id), self.bagname)
 
     def __setattr__(self, key, value):
         if key in self.__relations \
@@ -672,7 +675,7 @@ class Bag(object):
             return super(Bag, self).__getattribute__(key)
 
     def _load_properties(self):
-        response = _get('bag', self.bagname)
+        response = _get('bag', self.__id)
         if response.status_code == 200:
             data = response.json()
             item_id = '/'.join(data['item'].rstrip('/').split('/')[-2:])
@@ -760,6 +763,7 @@ class Bag(object):
         if not self.__loaded:
             self._load_properties()
         lines = ['--Bag--'.rjust(12)]
+        lines.append('%s: %s' % ('id'.rjust(8), self.id))
         lines.append('%s: %s' % ('bagname'.rjust(8), self.bagname))
         lines.append('%s: %s' % ('bag type'.rjust(8),
                      self.options('bag_type', self.bag_type)))
