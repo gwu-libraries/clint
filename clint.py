@@ -315,12 +315,12 @@ def main():
     listc.add_argument('-n', '--name', help='Name of the Collection')
     listc.add_argument('-d', '--description',
         help='Description of the Collection')
-    listc.add_argument('-m', '--manager', help='Manager of the Collection')
+    listc.add_argument('-m', '--contact_person', help='Contact Person of the Collection')
+    listc.add_argument('-l', '--local_id', help='Local identifier of the Collection')
     listc.add_argument('--model', default='collection')
     # add project
     listp = listsubpar.add_parser('project', help='Add a project to Inventory')
     listp.add_argument('-n', '--name', help='Name of the project')
-    listp.add_argument('-m', '--manager', help='Manager of the project')
     listp.add_argument('-c', '--collection',
         help='ID of the collection this project feeds')
     listp.add_argument('--model', default='project')
@@ -368,12 +368,12 @@ def main():
     addc.add_argument('-n', '--name', help='Name of the Collection')
     addc.add_argument('-d', '--description',
         help='Description of the Collection')
-    addc.add_argument('-m', '--manager', help='Manager of the Collection')
+    addc.add_argument('-m', '--contact_person', help='Contact Person of the Collection')
+    addc.add_argument('-l', '--local_id', help='Local identifier of the Collection')
     addc.add_argument('--model', default='collection')
     # add project
     addp = addsubpar.add_parser('project', help='Add a project to Inventory')
     addp.add_argument('-n', '--name', help='Name of the project')
-    addp.add_argument('-m', '--manager', help='Manager of the project')
     addp.add_argument('-c', '--collection',
         help='ID of the collection this project feeds')
     addp.add_argument('--model', default='project')
@@ -423,14 +423,14 @@ def main():
     editc.add_argument('-n', '--name', help='Name of the Collection')
     editc.add_argument('-d', '--description',
         help='Description of the Collection')
-    editc.add_argument('-m', '--manager', help='Manager of the Collection')
+    editc.add_argument('-m', '--contact_person', help='Contact Person of the Collection')
+    editc.add_argument('-l', '--local_id', help='Local identifier of the Collection')
     editc.add_argument('--model', default='collection')
     # edit project
     editp = editsubpar.add_parser('project',
         help='Edit a project in the Inventory')
     editp.add_argument('id', help='identifier of the project')
     editp.add_argument('-n', '--name', help='Name of the project')
-    editp.add_argument('-m', '--manager', help='Manager of the project')
     editp.add_argument('-c', '--collection',
         help='ID of the collection this project feeds')
     editp.add_argument('--model', default='project')
