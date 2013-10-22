@@ -2,6 +2,8 @@
 
 import argparse
 from datetime import datetime
+import json
+import logging
 import os
 from pprint import pprint
 import readline
@@ -9,10 +11,11 @@ import shutil
 
 import bagit
 
-from inventory import Machine, Collection, Project, Item, Bag, BagAction
+from inventory import Bag, BagAction
 import inventory as inv
-import settings
 
+
+log = logging.getLogger('clint')
 
 '''
 List of potential clint commands
@@ -36,7 +39,7 @@ validate <id>
 # reference variables
 models = ['machine', 'collection', 'project', 'item', 'bag']
 orig_item_types = ['book', 'microfilm', 'audio', 'video', 'mixed',
-    'other']
+                   'other']
 bag_types = ['access', 'preservation', 'export']
 
 
@@ -49,23 +52,27 @@ def ls(args):
             if val is not None and val != '':
                 params[model] = val
     res = inv._get(model=args.model, params=params)
-    objects = res.json().get('objects', None)
-    if not objects:
-        print 'No %ss found' % args.model
+    data = res.json()
+    if args.json:
+        print json.dumps(data, indent=2)
     else:
-        for index, obj in enumerate(objects, start=1):
-            print '-----%s-----' % index
-            if 'bagname' in obj.keys():
-                print 'bagname: %s' % obj.pop('bagname')
-            else:
-                print 'id: %s'  % obj.pop('id')
-            if 'name' in obj.keys():
-                print 'name: %s' % obj.pop('name')
-            elif 'title' in obj.keys():
-                print 'title: %s'  % obj.pop('title')
-            for k in sorted(obj.keys()):
-                print '%s: %s' % (k, obj[k])
-        print '----------\n%s total %ss' % (len(objects),args.model)
+        objects = res.json().get('objects', None)
+        if not objects:
+            print 'No %ss found' % args.model
+        else:
+            for index, obj in enumerate(objects, start=1):
+                print '-----%s-----' % index
+                if 'bagname' in obj.keys():
+                    print 'bagname: %s' % obj.pop('bagname')
+                else:
+                    print 'id: %s' % obj.pop('id')
+                if 'name' in obj.keys():
+                    print 'name: %s' % obj.pop('name')
+                elif 'title' in obj.keys():
+                    print 'title: %s' % obj.pop('title')
+                for k in sorted(obj.keys()):
+                    print '%s: %s' % (k, obj[k])
+            print '----------\n%s total %ss' % (len(objects), args.model)
 
 
 def show(args):
@@ -293,6 +300,8 @@ def main():
     parser = argparse.ArgumentParser(
         description='A command line tool for Inventory operations')
     parser.add_argument('-j', '--json', action='store_true',
+                        default=False, help='render output as JSON')
+
     # add subparsers for each command
     subparsers = parser.add_subparsers()
 
@@ -307,7 +316,8 @@ def main():
     show_parser.set_defaults(func=show)
 
     #parser for the "list" command
-    list_parser = subparsers.add_parser('list', help='List objects in the inventory')
+    list_parser = subparsers.add_parser('list',
+                                        help='List objects in the inventory')
     list_parser.set_defaults(func=ls)
     # add subparsers for each kind of object
     listsubpar = list_parser.add_subparsers()
