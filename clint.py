@@ -11,7 +11,7 @@ import shutil
 
 import bagit
 
-from inventory import Bag, BagAction
+from inventory import Bag, BagAction, Collection, Item, Machine, Project
 import inventory as inv
 
 
@@ -81,17 +81,22 @@ def show(args):
             obj = globals()[args.model.capitalize()](local_id=args.id)
         else:
             obj = globals()[args.model.capitalize()](args.id)
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print obj.to_string()
     except inv.Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
     except Exception, e:
-        print 'Error fetching data!\n', e
+        print 'Error fetching data!', e
+        log.exception('Error fetching %s "%s"' % (args.model, args.id))
 
 
 def add(args):
     try:
         obj = globals()[args.model.capitalize()]()
-        vals = [a for a in obj.readwrite() if getattr(args, a, None) is not None]
+        vals = [a for a in obj.readwrite()
+                if getattr(args, a, None) is not None]
         for attr in vals:
             setattr(obj, attr, getattr(args, attr))
         # if no optional args passed, get metadata from user

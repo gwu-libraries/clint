@@ -104,7 +104,14 @@ class NonUniqueIdentifierError(Exception):
         return repr(self.identifier)
 
 
-class Machine(object):
+class JSONSerializable(object):
+
+    @property
+    def as_json(self):
+        return getattr(self, '_data', {})
+
+
+class Machine(JSONSerializable):
 
     __readonly = ['id', 'resource_uri']
     __readwrite = ['name', 'url', 'ip', 'notes', 'www_root']
@@ -201,7 +208,7 @@ class Machine(object):
         return '\n'.join(lines)
 
 
-class Collection(object):
+class Collection(JSONSerializable):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
     __readwrite = ['name', 'local_id', 'description', 'contact_person', 'access_loc']
@@ -305,7 +312,7 @@ class Collection(object):
         return '\n'.join(lines)
 
 
-class Project(object):
+class Project(JSONSerializable):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
     __readwrite = ['name', 'collection']
@@ -424,7 +431,7 @@ class Project(object):
         return '\n'.join(lines)
 
 
-class Item(object):
+class Item(JSONSerializable):
 
     __readonly = ['id', 'created', 'stats', 'resource_uri']
     __readwrite = ['title', 'local_id', 'notes', 'project', 'collection',
@@ -624,7 +631,7 @@ class Item(object):
         return '\n'.join(lines)
 
 
-class Bag(object):
+class Bag(JSONSerializable):
 
     __readonly = ['id', 'resource_uri']
     # bagname is readwrite for now because inventory does not autoassign names
@@ -782,7 +789,7 @@ class Bag(object):
         return '\n'.join(lines)
 
 
-class BagAction(object):
+class BagAction(JSONSerializable):
 
     __readonly = ['id']
     __readwrite = ['bag', 'timestamp', 'action', 'note']
