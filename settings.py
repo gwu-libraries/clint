@@ -1,6 +1,10 @@
 # Local Settings Template
 # copy the following settings into a local_settings.py file
 
+import logging
+
+LOG_LEVEL = logging.INFO
+
 INVENTORY_CREDENTIALS = {
     'user': '',
     'apikey': '',

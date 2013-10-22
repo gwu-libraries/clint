@@ -1,9 +1,14 @@
 import json
+import logging
 
 import requests
 
+import settings
 from settings import INVENTORY_CREDENTIALS as creds
 
+
+logging.basicConfig(level=settings.LOG_LEVEL)
+log = logging.getLogger('inventory')
 
 baseurl = '%s/api/%s' % (creds['url'], creds['apiversion'])
 auth_header = {'Authorization': 'ApiKey %s:%s' % (creds['user'],
@@ -136,13 +141,13 @@ class Machine(object):
     def _load_properties(self):
         response = _get('machine', self.__id)
         if response.status_code == 200:
-            data = response.json()
-            self.name = data['name']
-            self.url = data['url']
-            self.ip = data['ip']
-            self.notes = data['notes']
-            self.www_root = data['www_root']
-            self.__resource_uri = data['resource_uri']
+            self._data = response.json()
+            self.name = self._data['name']
+            self.url = self._data['url']
+            self.ip = self._data['ip']
+            self.notes = self._data['notes']
+            self.www_root = self._data['www_root']
+            self.__resource_uri = self._data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404('Machine identified by %s not found' %
@@ -236,15 +241,15 @@ class Collection(object):
     def _load_properties(self):
         response = _get('collection', self.__id)
         if response.status_code == 200:
-            data = response.json()
-            self.name = data['name']
-            self.local_id = data['local_id']
-            self.description = data['description']
-            self.contact_person = data['contact_person']
-            self.access_loc = data['access_loc']
-            self.__created = data['created']
-            self.__stats = data['stats']
-            self.__resource_uri = data['resource_uri']
+            self._data = response.json()
+            self.name = self._data['name']
+            self.local_id = self._data['local_id']
+            self.description = self._data['description']
+            self.contact_person = self._data['contact_person']
+            self.access_loc = self._data['access_loc']
+            self.__created = self._data['created']
+            self.__stats = self._data['stats']
+            self.__resource_uri = self._data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404('Collection identified by %s not found' %
@@ -346,17 +351,17 @@ class Project(object):
     def _load_properties(self):
         response = _get('project', self.__id)
         if response.status_code == 200:
-            data = response.json()
-            if data['collection']:
+            self._data = response.json()
+            if self._data['collection']:
                 collection_id = '/'.join(
-                    data['collection'].rstrip('/').split('/')[-2:])
+                    self._data['collection'].rstrip('/').split('/')[-2:])
                 self.collection = collection_id
             else:
                 self.__collection = None
-            self.name = data['name']
-            self.__created = data['created']
-            self.__stats = data['stats']
-            self.__resource_uri = data['resource_uri']
+            self.name = self._data['name']
+            self.__created = self._data['created']
+            self.__stats = self._data['stats']
+            self.__resource_uri = self._data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404('Project identified by %s not found' %
@@ -488,37 +493,37 @@ class Item(object):
         else:
             raise NoIdentifierError()
         if response.status_code == 200:
-            data = response.json()
+            self._data = response.json()
             if not self.__id:
-                if len(data['objects']) > 1:
+                if len(self._data['objects']) > 1:
                     raise NonUniqueIdentifierError(self.local_id)
-                elif len(data['objects']) == 0:
+                elif len(self._data['objects']) == 0:
                     print 'no objects'
                     raise Inventory404('Item identified by %s not found' %
                                        self.__id)
                 else:
-                    data = data['objects'][0]
-                    self.__id = data['id']
-            self.title = data['title']
-            self.local_id = data['local_id']
-            self.__created = data['created']
-            if data['collection']:
+                    self._data = self._data['objects'][0]
+                    self.__id = self._data['id']
+            self.title = self._data['title']
+            self.local_id = self._data['local_id']
+            self.__created = self._data['created']
+            if self._data['collection']:
                 collection_id = '/'.join(
-                    data['collection'].rstrip('/').split('/')[-2:])
+                    self._data['collection'].rstrip('/').split('/')[-2:])
                 self.collection = collection_id
             else:
                 self.__collection = None
-            if data['project']:
+            if self._data['project']:
                 project_id = '/'.join(
-                    data['project'].rstrip('/').split('/')[-2:])
+                    self._data['project'].rstrip('/').split('/')[-2:])
                 self.project = project_id
             else:
                 self.__project = None
-            self.original_item_type = data['original_item_type']
-            self.__stats = data['stats']
-            self.__resource_uri = data['resource_uri']
+            self.original_item_type = self._data['original_item_type']
+            self.__stats = self._data['stats']
+            self.__resource_uri = self._data['resource_uri']
             self.__loaded = True
-            self.access_loc = data['access_loc']
+            self.access_loc = self._data['access_loc']
         elif response.status_code == 404:
             # try looking up by local id instead
             if self.__id and not self.local_id:
@@ -624,8 +629,8 @@ class Bag(object):
     __readonly = ['id', 'resource_uri']
     # bagname is readwrite for now because inventory does not autoassign names
     # change this once inventory code has been changed
-    __readwrite = ['bagname', 'bag_type', 'absolute_filesystem_path', 'payload', 'machine',
-                   'item', 'created']
+    __readwrite = ['bagname', 'bag_type', 'absolute_filesystem_path',
+                   'payload', 'machine', 'item', 'created']
     __relations = ['machine', 'item']
     __options = {
         'bag_type': {
@@ -635,8 +640,9 @@ class Bag(object):
         }
     }
 
-    def __init__(self, id=None, bagname=None, created=None, item=None, machine=None,
-                 absolute_filesystem_path='', bag_type='', payload=''):
+    def __init__(self, id=None, bagname=None, created=None, item=None,
+                 machine=None, absolute_filesystem_path='', bag_type='',
+                 payload=''):
         self.__loaded = False
         self.__id = id
         self.bagname = bagname
@@ -670,24 +676,24 @@ class Bag(object):
         if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
                                                        'relations', 'options']:
             return super(Bag, self).__getattribute__("_%s__%s" %
-                (self.__class__.__name__, key))
+                                    (self.__class__.__name__, key))
         else:
             return super(Bag, self).__getattribute__(key)
 
     def _load_properties(self):
         response = _get('bag', self.__id)
         if response.status_code == 200:
-            data = response.json()
-            item_id = '/'.join(data['item'].rstrip('/').split('/')[-2:])
-            machine_id = '/'.join(data['machine'].rstrip('/').split('/')[-1:])
-            self.bagname = data['bagname']
-            self.created = data['created']
-            self.bag_type = data['bag_type']
+            self._data = response.json()
+            item_id = '/'.join(self._data['item'].rstrip('/').split('/')[-2:])
+            machine_id = '/'.join(self._data['machine'].rstrip('/').split('/')[-1:])
+            self.bagname = self._data['bagname']
+            self.created = self._data['created']
+            self.bag_type = self._data['bag_type']
             self.item = item_id
             self.machine = machine_id
-            self.absolute_filesystem_path = data['absolute_filesystem_path']
-            self.payload = data['payload']
-            self.__resource_uri = data['resource_uri']
+            self.absolute_filesystem_path = self._data['absolute_filesystem_path']
+            self.payload = self._data['payload']
+            self.__resource_uri = self._data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404('Bag identified by %s not found' %
@@ -770,7 +776,8 @@ class Bag(object):
         lines.append('%s: %s' % ('created'.rjust(8), self.created))
         lines.append('%s: %s' % ('item'.rjust(8), self.item))
         lines.append('%s: %s' % ('machine'.rjust(8), self.machine))
-        lines.append('%s: %s' % ('absolute_filesystem_path'.rjust(8), self.absolute_filesystem_path))
+        lines.append('%s: %s' % ('absolute_filesystem_path'.rjust(8),
+                                 self.absolute_filesystem_path))
         #lines.append('%s: %s' % ('payload'.rjust(11), self.__payload))
         return '\n'.join(lines)
 
@@ -819,20 +826,20 @@ class BagAction(object):
         if key in self.__class__.__readonly or key in ['readonly', 'readwrite',
                                                        'relations', 'options']:
             return super(BagAction, self).__getattribute__("_%s__%s" %
-                (self.__class__.__name__, key))
+                                          (self.__class__.__name__, key))
         else:
             return super(BagAction, self).__getattribute__(key)
 
     def _load_properties(self):
         response = _get('bagaction', self.__id)
         if response.status_code == 200:
-            data = response.json()
-            bagname = '/'.join(data['bag'].rstrip('/').split('/')[4:])
+            self._data = response.json()
+            bagname = '/'.join(self._data['bag'].rstrip('/').split('/')[4:])
             self.bag = bagname
-            self.timestamp = data['timestamp']
-            self.action = data['action']
-            self.note = data['note']
-            self.__resource_uri = data['resource_uri']
+            self.timestamp = self._data['timestamp']
+            self.action = self._data['action']
+            self.note = self._data['note']
+            self.__resource_uri = self._data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
             raise Inventory404('BagAction identified by %s not found' %
