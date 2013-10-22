@@ -292,8 +292,9 @@ def main():
     # create clint level parser
     parser = argparse.ArgumentParser(
         description='A command line tool for Inventory operations')
-    subparsers = parser.add_subparsers()
+    parser.add_argument('-j', '--json', action='store_true',
     # add subparsers for each command
+    subparsers = parser.add_subparsers()
 
     # parser for the "show" command
     show_parser = subparsers.add_parser('show',
