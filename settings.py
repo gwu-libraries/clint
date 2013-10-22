@@ -3,7 +3,7 @@
 
 import logging
 
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.ERROR
 
 INVENTORY_CREDENTIALS = {
     'user': '',
