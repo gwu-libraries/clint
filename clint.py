@@ -103,10 +103,15 @@ def add(args):
         if vals == []:
             user_build_new_obj(obj, args.model)
         obj.save()
-        print '%s Created!\n' % args.model.capitalize()
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print '%s Created!\n' % args.model.capitalize()
+            print obj.to_string()
     except inv.Inventory404, e:
         print 'Error creating record: %s' % e.msg
+        log.exception('Error creating record for %s' %
+                      args.model.capitalize())
 
 
 def edit(args):
@@ -205,21 +210,24 @@ def bag(args):
         # try to parse the optional fields
         if args.remainder:
             addb = argparse.ArgumentParser()
-            addb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
+            addb.add_argument('-n', '--bagname',
+                              help='Identifier/name of the bag')
             addb.add_argument('-t', '--bagtype', choices=bag_types,
-                help='Type of bag')
-            addb.add_argument('-p', '--path', help='Path to bag from server root')
+                              help='Type of bag')
+            addb.add_argument('-p', '--path',
+                              help='Path to bag from server root')
             addb.add_argument('-y', '--payload', help='Payload of the bag')
             addb.add_argument('-m', '--machine',
-                help='Machine this bag is stored on')
+                              help='Machine this bag is stored on')
             addb.add_argument('-i', '--item',
-                help='Item this bag is associated with')
+                              help='Item this bag is associated with')
             addb.add_argument('-c', '--created',
-                help='Timestamp when this bag was created')
+                              help='Timestamp when this bag was created')
             addb.add_argument('--model', default='bag')
             addb.set_defaults(func=add)
             addbargs = addb.parse_args(args.remainder)
-            vals = [a for a in obj.readwrite() if getattr(addbargs, a, None) is not None]
+            vals = [a for a in obj.readwrite()
+                    if getattr(addbargs, a, None) is not None]
             print 'vals: %s' % vals
             for attr in vals:
                 setattr(obj, attr, getattr(addbargs, attr))
