@@ -661,7 +661,7 @@ class Bag(JSONSerializable):
         self.item = item
 
     def __str__(self):
-        return '<Bag %s - %s>' % (str(self.id), self.bagname)
+        return '<Bag %s - %s>' % (str(self.__id), self.bagname)
 
     def __setattr__(self, key, value):
         if key in self.__relations \
@@ -723,7 +723,7 @@ class Bag(JSONSerializable):
             response = _post('bag', **data)
             if response.status_code == 201:
                 url = response.headers['Location']
-                self.bagname = '/'.join(url.rstrip('/').split('/')[6:])
+                self.__id = '/'.join(url.rstrip('/').split('/')[6:])
                 return self
             else:
                 raise InventoryError(response.text)
@@ -733,7 +733,7 @@ class Bag(JSONSerializable):
                     data[field] = getattr(self, field).resource_uri
                 else:
                     data[field] = getattr(self, field)
-            response = _put('bag', self.bagname, **data)
+            response = _put('bag', self.id, **data)
             if response.status_code == 204:
                 return self
             else:
@@ -776,7 +776,7 @@ class Bag(JSONSerializable):
         if not self.__loaded:
             self._load_properties()
         lines = ['--Bag--'.rjust(12)]
-        lines.append('%s: %s' % ('id'.rjust(8), self.id))
+        lines.append('%s: %s' % ('id'.rjust(8), self.__id))
         lines.append('%s: %s' % ('bagname'.rjust(8), self.bagname))
         lines.append('%s: %s' % ('bag type'.rjust(8),
                      self.options('bag_type', self.bag_type)))

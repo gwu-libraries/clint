@@ -8,6 +8,7 @@ import os
 from pprint import pprint
 import readline
 import shutil
+import ast
 
 import bagit
 
@@ -194,9 +195,53 @@ def build_bag_payload(bagitbag, path):
 
 
 def bag(args):
+    # try to parse the optional fields
+    addb = argparse.ArgumentParser()
+    if args.remainder:
+        addb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
+        addb.add_argument('-t', '--bagtype', choices=bag_types,
+            help='Type of bag')
+        addb.add_argument('-p', '--path', help='Path to bag from server root', dest='absolute_filesystem_path')
+        addb.add_argument('-y', '--payload', help='Payload of the bag')
+        addb.add_argument('-m', '--machine',
+            help='Machine this bag is stored on')
+        addb.add_argument('-i', '--item',
+            help='Item this bag is associated with')
+        addb.add_argument('-c', '--created',
+            help='Timestamp when this bag was created')
+        addb.add_argument('--model', default='bag')
+        addb.add_argument('--force', help='Forcefully bag an existing bag path', action='store_true', default=False)
+        addb.add_argument('-a', '--params', help='Additional params for Bagit info file.')
+        addb.set_defaults(func=add)
     try:
+        bag = bagit.Bag(args.path)
+
+        if bag.is_valid():
+            bag_args = addb.parse_args(args.remainder)
+            if not bag_args.__contains__('force'):
+                print 'The path provided is already a Bag. If you want to rebag an existing Bag use command "./clint rebag <PATH_TO_BAG>". If you want to forcefully bag an existing Bag, use the --force flag.'
+                create_bag_ans = raw_input('Are you sure you want to continue and'
+                                           ' create a new Bag for the path - <' +
+                                           args.path + '>?(y or n):')
+                while create_bag_ans.upper() not in ['Y', 'N', 'YES', 'NO']:
+                    create_bag_ans = raw_input('Are you sure you want to continue'
+                                               'and create a new Bag for the path '
+                                               '- <' + args.path + '>? (y or n):')
+                if create_bag_ans.upper() in ['N', 'NO']:
+                    return
+    except bagit.BagError:
+        print 'Creating new Bag for path - <' + args.path + '>'
+
+    try:
+        #Additional params to be passed to Bagit to be included in the bag-info.txt file
+        params = {}
+        if args.remainder:
+            bag_args = addb.parse_args(args.remainder)
+            if bag_args.params:
+                params = ast.literal_eval(bag_args.params)
+
         # first create the bag
-        bag = bagit.make_bag(args.path)
+        bag = bagit.make_bag(args.path, params)
         print 'Bag created!'
         pprint(bag.entries)
         # also create the inventory object
@@ -228,13 +273,12 @@ def bag(args):
             addbargs = addb.parse_args(args.remainder)
             vals = [a for a in obj.readwrite()
                     if getattr(addbargs, a, None) is not None]
-            print 'vals: %s' % vals
+            log.debug('vals: %s' % vals)
             for attr in vals:
                 setattr(obj, attr, getattr(addbargs, attr))
         # otherwise prompt the user
         else:
             user_build_new_obj(obj, 'bag')
-        obj.save()
         # adjust the bagname based on arguments
         dirname, bagname = os.path.split(args.path)
         if obj.bagname and obj.bagname != bagname:
@@ -418,12 +462,14 @@ def main():
     addb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
     addb.add_argument('-t', '--bagtype', choices=bag_types,
         help='Type of bag')
-    addb.add_argument('-p', '--path', help='Path to bag from server root')
+    addb.add_argument('-p', '--path', help='Path to bag from server root', dest='absolute_filesystem_path')
     addb.add_argument('-y', '--payload', help='Payload of the bag')
     addb.add_argument('-m', '--machine', help='Machine this bag is stored on')
     addb.add_argument('-i', '--item', help='Item this bag is associated with')
     addb.add_argument('-c', '--created',
         help='Timestamp when this bag was created')
+    addb.add_argument('--force', help='Forcefully bag an existing bag path', action='store_true')
+    addb.add_argument('-a', '--params', help='Additional params for Bagit info file.')
     addb.add_argument('--model', default='bag')
     # add machine
     addm = addsubpar.add_parser('machine',
