@@ -178,6 +178,27 @@ def build_bag_payload(bagitbag, path):
 
 def bag(args):
     try:
+        bag = bagit.Bag(args.path)
+
+        if bag.is_valid():
+            arg_parser = argparse.ArgumentParser()
+            arg_parser.add_argument('--force', help='Forcefully bag an existing bag path', action='store_true')
+            bag_args = arg_parser.parse_args(args.remainder)
+            if not bag_args.force:
+                print 'The path provided is already a Bag. If you want to rebag an existing Bag use command "./clint rebag <PATH_TO_BAG>". If you want to forcefully bag an existing Bag, use the --force flag.'
+                create_bag_ans = raw_input('Are you sure you want to continue and'
+                                           ' create a new Bag for the path - <' +
+                                           args.path + '>?(y or n):')
+                while create_bag_ans.upper() not in ['Y', 'N', 'YES', 'NO']:
+                    create_bag_ans = raw_input('Are you sure you want to continue'
+                                               'and create a new Bag for the path '
+                                               '- <' + args.path + '>? (y or n):')
+                if create_bag_ans.upper() in ['N', 'NO']:
+                    return
+    except bagit.BagError:
+        print 'Creating new Bag for path - <' + args.path + '>'
+
+    try:
         # first create the bag
         bag = bagit.make_bag(args.path)
         print 'Bag created!'
@@ -205,6 +226,7 @@ def bag(args):
             addb.add_argument('-c', '--created',
                 help='Timestamp when this bag was created')
             addb.add_argument('--model', default='bag')
+            addb.add_argument('--force', help='Forcefully bag an existing bag path', action='store_true')
             addb.set_defaults(func=add)
             addbargs = addb.parse_args(args.remainder)
             vals = [a for a in obj.readwrite() if getattr(addbargs, a, None) is not None]
@@ -212,9 +234,9 @@ def bag(args):
             for attr in vals:
                 setattr(obj, attr, getattr(addbargs, attr))
         # otherwise prompt the user
+
         else:
             user_build_new_obj(obj, 'bag')
-        obj.save()
         # adjust the bagname based on arguments
         dirname, bagname = os.path.split(args.path)
         if obj.bagname and obj.bagname != bagname:
@@ -400,6 +422,7 @@ def main():
     addb.add_argument('-i', '--item', help='Item this bag is associated with')
     addb.add_argument('-c', '--created',
         help='Timestamp when this bag was created')
+    addb.add_argument('--force', help='Forcefully bag an existing bag path', action='store_true')
     addb.add_argument('--model', default='bag')
     # add machine
     addm = addsubpar.add_parser('machine',
