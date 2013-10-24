@@ -111,8 +111,6 @@ def add(args):
             print obj.to_string()
     except inv.Inventory404, e:
         print 'Error creating record: %s' % e.msg
-        log.exception('Error creating record for %s' %
-                      args.model.capitalize())
 
 
 def edit(args):
@@ -121,7 +119,10 @@ def edit(args):
             obj = globals()[args.model.capitalize()](local_id=args.local_id)
         else:
             obj = globals()[args.model.capitalize()](args.id)
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print obj.to_string()
     except inv.Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
         return
@@ -133,18 +134,24 @@ def edit(args):
         if edits == []:
             user_edit_obj(obj)
         obj.save()
-        print '\n%s Edited!\n' % args.model.capitalize()
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print '\n%s Edited!\n' % args.model.capitalize()
+            print obj.to_string()
     except inv.Inventory404, e:
         print 'Error editing record: %s' % e.msg
 
 
 def delete(args):
     response = inv._delete(args.model, args.id)
-    if response.status_code == 204:
-        print 'Successful deletion of %s %s' % (args.model, args.id)
+    if args.json:
+        print json.dumps(response.json(), indent=2)
     else:
-        print 'Error deleting %s %s' % (args.model, args.id)
+        if response.status_code == 204:
+            print 'Successful deletion of %s %s' % (args.model, args.id)
+        else:
+            print 'Error deleting %s %s' % (args.model, args.id)
 
 
 def user_build_new_obj(obj, model):
@@ -242,8 +249,11 @@ def bag(args):
 
         # first create the bag
         bag = bagit.make_bag(args.path, params)
-        print 'Bag created!'
-        pprint(bag.entries)
+        if args.json:
+            print json.dumps(bag.as_json, indent=2)
+        else:
+            print 'Bag created!'
+            pprint(bag.entries)
         # also create the inventory object
         obj = Bag()
         # load payload
@@ -286,7 +296,10 @@ def bag(args):
             shutil.move(args.path, newpath)
             obj.path = newpath
         obj.save()
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print obj.to_string()
     except OSError:
         print 'Bag already exists'
         ans = ''
@@ -325,7 +338,7 @@ def rebag(args):
     obj.payload = build_bag_payload(bag, bagpath)
     obj.save()
     action = BagAction(bag=bagname, timestamp=str(datetime.now()),
-        action='1', note='initiated by clint')
+                       action='1', note='initiated by clint')
     action.save()
     print 'Action recorded in Inventory'
 
@@ -333,13 +346,16 @@ def rebag(args):
 def validate(args):
     bag = bagit.Bag(args.path)
     if bag.is_valid():
-        print 'Bag is valid!'
         bagname = os.path.basename(args.path)
         action = BagAction(bag=bagname, timestamp=str(datetime.now()),
-            action='3', note='initiated by clint')
+                           action='3', note='initiated by clint')
         action.save()
-        print 'action id: %s' % action.id
-        print action.to_string()
+        if args.json:
+            print json.dumps(action.as_json, indent=2)
+        else:
+            print 'Bag is valid!'
+            print 'action id: %s' % action.id
+            print action.to_string()
     else:
         print 'Bag is NOT valid'
 
