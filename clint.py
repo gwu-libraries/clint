@@ -119,15 +119,12 @@ def edit(args):
             obj = globals()[args.model.capitalize()](local_id=args.local_id)
         else:
             obj = globals()[args.model.capitalize()](args.id)
-        if args.json:
-            print json.dumps(obj.as_json, indent=2)
-        else:
-            print obj.to_string()
     except inv.Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
         return
     try:
-        edits = [a for a in obj.readwrite() if getattr(args, a, None) is not None]
+        edits = [a for a in obj.readwrite()
+                 if getattr(args, a, None) is not None]
         for attr in edits:
             setattr(obj, attr, getattr(args, attr))
         # if no optional args passed, get metadata from user
