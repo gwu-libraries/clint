@@ -2,6 +2,8 @@
 
 import argparse
 from datetime import datetime
+import json
+import logging
 import os
 from pprint import pprint
 import readline
@@ -10,10 +12,11 @@ import ast
 
 import bagit
 
-from inventory import Machine, Collection, Project, Item, Bag, BagAction
+from inventory import Bag, BagAction, Collection, Item, Machine, Project
 import inventory as inv
-import settings
 
+
+log = logging.getLogger('clint')
 
 '''
 List of potential clint commands
@@ -37,7 +40,7 @@ validate <id>
 # reference variables
 models = ['machine', 'collection', 'project', 'item', 'bag']
 orig_item_types = ['book', 'microfilm', 'audio', 'video', 'mixed',
-    'other']
+                   'other']
 bag_types = ['access', 'preservation', 'export']
 
 
@@ -50,23 +53,27 @@ def ls(args):
             if val is not None and val != '':
                 params[model] = val
     res = inv._get(model=args.model, params=params)
-    objects = res.json().get('objects', None)
-    if not objects:
-        print 'No %ss found' % args.model
+    data = res.json()
+    if args.json:
+        print json.dumps(data, indent=2)
     else:
-        for index, obj in enumerate(objects, start=1):
-            print '-----%s-----' % index
-            if 'bagname' in obj.keys():
-                print 'bagname: %s' % obj.pop('bagname')
-            else:
-                print 'id: %s'  % obj.pop('id')
-            if 'name' in obj.keys():
-                print 'name: %s' % obj.pop('name')
-            elif 'title' in obj.keys():
-                print 'title: %s'  % obj.pop('title')
-            for k in sorted(obj.keys()):
-                print '%s: %s' % (k, obj[k])
-        print '----------\n%s total %ss' % (len(objects),args.model)
+        objects = res.json().get('objects', None)
+        if not objects:
+            print 'No %ss found' % args.model
+        else:
+            for index, obj in enumerate(objects, start=1):
+                print '-----%s-----' % index
+                if 'bagname' in obj.keys():
+                    print 'bagname: %s' % obj.pop('bagname')
+                else:
+                    print 'id: %s' % obj.pop('id')
+                if 'name' in obj.keys():
+                    print 'name: %s' % obj.pop('name')
+                elif 'title' in obj.keys():
+                    print 'title: %s' % obj.pop('title')
+                for k in sorted(obj.keys()):
+                    print '%s: %s' % (k, obj[k])
+            print '----------\n%s total %ss' % (len(objects), args.model)
 
 
 def show(args):
@@ -75,25 +82,33 @@ def show(args):
             obj = globals()[args.model.capitalize()](local_id=args.id)
         else:
             obj = globals()[args.model.capitalize()](args.id)
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print obj.to_string()
     except inv.Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
     except Exception, e:
-        print 'Error fetching data!\n', e
+        print 'Error fetching data!', e
+        log.exception('Error fetching %s "%s"' % (args.model, args.id))
 
 
 def add(args):
     try:
         obj = globals()[args.model.capitalize()]()
-        vals = [a for a in obj.readwrite() if getattr(args, a, None) is not None]
+        vals = [a for a in obj.readwrite()
+                if getattr(args, a, None) is not None]
         for attr in vals:
             setattr(obj, attr, getattr(args, attr))
         # if no optional args passed, get metadata from user
         if vals == []:
             user_build_new_obj(obj, args.model)
         obj.save()
-        print '%s Created!\n' % args.model.capitalize()
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print '%s Created!\n' % args.model.capitalize()
+            print obj.to_string()
     except inv.Inventory404, e:
         print 'Error creating record: %s' % e.msg
 
@@ -104,7 +119,10 @@ def edit(args):
             obj = globals()[args.model.capitalize()](local_id=args.local_id)
         else:
             obj = globals()[args.model.capitalize()](args.id)
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print obj.to_string()
     except inv.Inventory404, e:
         print 'No record found for %s %s' % (args.model, args.id)
         return
@@ -116,18 +134,28 @@ def edit(args):
         if edits == []:
             user_edit_obj(obj)
         obj.save()
-        print '\n%s Edited!\n' % args.model.capitalize()
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print '\n%s Edited!\n' % args.model.capitalize()
+            print obj.to_string()
     except inv.Inventory404, e:
         print 'Error editing record: %s' % e.msg
 
 
 def delete(args):
     response = inv._delete(args.model, args.id)
-    if response.status_code == 204:
-        print 'Successful deletion of %s %s' % (args.model, args.id)
+    if args.json:
+        # TODO: status code perhaps? see
+        # https://github.com/gwu-libraries/clint/issues/49
+        pass
     else:
-        print 'Error deleting %s %s' % (args.model, args.id)
+        if response.status_code == 204:
+            print 'Successful deletion of %s %s' % (args.model, args.id)
+        else:
+            log.exception('response.status_code: %s' % response.status_code)
+            log.debug('response.text: %s' % response.text)
+            print 'Error deleting %s %s' % (args.model, args.id)
 
 
 def user_build_new_obj(obj, model):
@@ -225,8 +253,11 @@ def bag(args):
 
         # first create the bag
         bag = bagit.make_bag(args.path, params)
-        print 'Bag created!'
-        pprint(bag.entries)
+        if args.json:
+            print json.dumps(bag.as_json, indent=2)
+        else:
+            print 'Bag created!'
+            pprint(bag.entries)
         # also create the inventory object
         obj = Bag()
         # load payload
@@ -237,13 +268,29 @@ def bag(args):
         obj.path = os.path.abspath(os.path.join(os.getcwd(), bagdir, bagname))
         # try to parse the optional fields
         if args.remainder:
+            addb = argparse.ArgumentParser()
+            addb.add_argument('-n', '--bagname',
+                              help='Identifier/name of the bag')
+            addb.add_argument('-t', '--bagtype', choices=bag_types,
+                              help='Type of bag')
+            addb.add_argument('-p', '--path',
+                              help='Path to bag from server root')
+            addb.add_argument('-y', '--payload', help='Payload of the bag')
+            addb.add_argument('-m', '--machine',
+                              help='Machine this bag is stored on')
+            addb.add_argument('-i', '--item',
+                              help='Item this bag is associated with')
+            addb.add_argument('-c', '--created',
+                              help='Timestamp when this bag was created')
+            addb.add_argument('--model', default='bag')
+            addb.set_defaults(func=add)
             addbargs = addb.parse_args(args.remainder)
-            vals = [a for a in obj.readwrite() if getattr(addbargs, a, None) is not None]
-            print 'vals: %s' % vals
+            vals = [a for a in obj.readwrite()
+                    if getattr(addbargs, a, None) is not None]
+            log.debug('vals: %s' % vals)
             for attr in vals:
                 setattr(obj, attr, getattr(addbargs, attr))
         # otherwise prompt the user
-
         else:
             user_build_new_obj(obj, 'bag')
         # adjust the bagname based on arguments
@@ -253,7 +300,10 @@ def bag(args):
             shutil.move(args.path, newpath)
             obj.path = newpath
         obj.save()
-        print obj.to_string()
+        if args.json:
+            print json.dumps(obj.as_json, indent=2)
+        else:
+            print obj.to_string()
     except OSError:
         print 'Bag already exists'
         ans = ''
@@ -292,7 +342,7 @@ def rebag(args):
     obj.payload = build_bag_payload(bag, bagpath)
     obj.save()
     action = BagAction(bag=bagname, timestamp=str(datetime.now()),
-        action='1', note='initiated by clint')
+                       action='1', note='initiated by clint')
     action.save()
     print 'Action recorded in Inventory'
 
@@ -300,13 +350,16 @@ def rebag(args):
 def validate(args):
     bag = bagit.Bag(args.path)
     if bag.is_valid():
-        print 'Bag is valid!'
         bagname = os.path.basename(args.path)
         action = BagAction(bag=bagname, timestamp=str(datetime.now()),
-            action='3', note='initiated by clint')
+                           action='3', note='initiated by clint')
         action.save()
-        print 'action id: %s' % action.id
-        print action.to_string()
+        if args.json:
+            print json.dumps(action.as_json, indent=2)
+        else:
+            print 'Bag is valid!'
+            print 'action id: %s' % action.id
+            print action.to_string()
     else:
         print 'Bag is NOT valid'
 
@@ -323,8 +376,11 @@ def main():
     # create clint level parser
     parser = argparse.ArgumentParser(
         description='A command line tool for Inventory operations')
-    subparsers = parser.add_subparsers()
+    parser.add_argument('-j', '--json', action='store_true',
+                        default=False, help='render output as JSON')
+
     # add subparsers for each command
+    subparsers = parser.add_subparsers()
 
     # parser for the "show" command
     show_parser = subparsers.add_parser('show',
@@ -337,7 +393,8 @@ def main():
     show_parser.set_defaults(func=show)
 
     #parser for the "list" command
-    list_parser = subparsers.add_parser('list', help='List objects in the inventory')
+    list_parser = subparsers.add_parser('list',
+                                        help='List objects in the inventory')
     list_parser.set_defaults(func=ls)
     # add subparsers for each kind of object
     listsubpar = list_parser.add_subparsers()
