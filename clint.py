@@ -146,11 +146,15 @@ def edit(args):
 def delete(args):
     response = inv._delete(args.model, args.id)
     if args.json:
-        print json.dumps(response.json(), indent=2)
+        # TODO: status code perhaps? see
+        # https://github.com/gwu-libraries/clint/issues/49
+        pass
     else:
         if response.status_code == 204:
             print 'Successful deletion of %s %s' % (args.model, args.id)
         else:
+            log.exception('response.status_code: %s' % response.status_code)
+            log.debug('response.text: %s' % response.text)
             print 'Error deleting %s %s' % (args.model, args.id)
 
 
