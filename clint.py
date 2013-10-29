@@ -127,7 +127,8 @@ def edit(args):
         print 'No record found for %s %s' % (args.model, args.id)
         return
     try:
-        edits = [a for a in obj.readwrite() if getattr(args, a, None) is not None]
+        edits = [a for a in obj.readwrite()
+                 if getattr(args, a, None) is not None]
         for attr in edits:
             setattr(obj, attr, getattr(args, attr))
         # if no optional args passed, get metadata from user
@@ -144,6 +145,11 @@ def edit(args):
 
 
 def delete(args):
+    if not args.force:
+        ans = ''
+        ans = raw_input('Please confirm by typing "Yes": ')
+        if ans != 'Yes':
+            return
     response = inv._delete(args.model, args.id)
     if args.json:
         # TODO: status code perhaps? see
@@ -211,7 +217,7 @@ def bag(args):
     if args.remainder:
         addb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
         addb.add_argument('-t', '--bagtype', choices=bag_types,
-            help='Type of bag')
+                          help='Type of bag')
         addb.add_argument('-p', '--path', help='Path to bag from server root', dest='absolute_filesystem_path')
         addb.add_argument('-y', '--payload', help='Payload of the bag')
         addb.add_argument('-m', '--machine',
@@ -221,8 +227,11 @@ def bag(args):
         addb.add_argument('-c', '--created',
             help='Timestamp when this bag was created')
         addb.add_argument('--model', default='bag')
-        addb.add_argument('--force', help='Forcefully bag an existing bag path', action='store_true', default=False)
-        addb.add_argument('-a', '--params', help='Additional params for Bagit info file.')
+        addb.add_argument('--force',
+                          help='Forcefully bag an existing bag path',
+                          action='store_true', default=False)
+        addb.add_argument('-a', '--params',
+                          help='Additional params for Bagit info file.')
         addb.set_defaults(func=add)
     try:
         bag = bagit.Bag(args.path)
@@ -567,6 +576,9 @@ def main():
         help='type of object to be acted on')
     del_parser.add_argument('id', default=None,
         help='identifier of the object')
+    del_parser.add_argument('--force', action='store_true',
+                            default=False,
+                            help='force deletion (no confirmation)')
     del_parser.set_defaults(func=delete)
 
     # parser for the "bag" command
