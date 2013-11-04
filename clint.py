@@ -312,6 +312,11 @@ def bag(args):
             shutil.move(args.path, newpath)
             obj.path = newpath
         obj.save()
+
+        #Change permissions for the 'data' directory inside the bagged folder
+        datapath = os.path.join(obj.absolute_filesystem_path, 'data')
+        os.chmod(datapath, 0755)
+
         if args.json:
             print json.dumps(obj.as_json, indent=2)
         else:
