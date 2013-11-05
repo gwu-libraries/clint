@@ -360,19 +360,25 @@ def rebag(args):
 
 
 def validate(args):
-    bag = bagit.Bag(args.path)
-    if bag.is_valid():
-        bagname = os.path.basename(args.path)
-        action = BagAction(bag=bagname, timestamp=str(datetime.now()),
-                           action='3', note='initiated by clint')
-        action.save()
-        if args.json:
-            print json.dumps(action.as_json, indent=2)
+    try:
+        bag = bagit.Bag(args.path)
+        if bag.is_valid():
+            if 'Bag-id' in bag.info:
+                bag_id = bag.info['Bag-id']
+                action = BagAction(bag=bag_id, timestamp=str(datetime.now()),
+                                   action='3', note='initiated by clint')
+                action.save()
+                if args.json:
+                    print json.dumps(action.as_json, indent=2)
+                else:
+                    print 'Bag is valid!'
+                    print 'action id: %s' % action.id
+                    print action.to_string()
+            else:
+                print 'Bag is valid, but not registered with Inventory.'
         else:
-            print 'Bag is valid!'
-            print 'action id: %s' % action.id
-            print action.to_string()
-    else:
+            print 'Bag is NOT valid'
+    except bagit.BagError:
         print 'Bag is NOT valid'
 
 
