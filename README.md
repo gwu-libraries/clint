@@ -39,7 +39,7 @@ Part II - Download the project
 5. Create virtual Python environment for the project
 
         $ cd clint
-        $ virtualenv --no-site-packages ENV
+        $ virtualenv ENV
 
 6. Activate your virtual environment
 
