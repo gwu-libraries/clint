@@ -107,7 +107,10 @@ def add(args):
         if args.json:
             print json.dumps(obj.as_json, indent=2)
         else:
-            print '%s Created!\n' % args.model.capitalize()
+            if args.model == 'bag':
+                print '%s added!\n' % args.model.capitalize()
+            else:
+                print '%s Created!\n' % args.model.capitalize()
             print obj.to_string()
     except inv.Inventory404, e:
         print 'Error creating record: %s' % e.msg
