@@ -103,6 +103,9 @@ def add(args):
         # if no optional args passed, get metadata from user
         if vals == []:
             user_build_new_obj(obj, args.model)
+        if args.model == 'bag':
+            bag = bagit.Bag(obj.absolute_filesystem_path)
+            obj.payload = build_bag_payload(bag, obj.absolute_filesystem_path)
         obj.save()
         if args.json:
             print json.dumps(obj.as_json, indent=2)
@@ -114,6 +117,9 @@ def add(args):
             print obj.to_string()
     except inv.Inventory404, e:
         print 'Error creating record: %s' % e.msg
+    except bagit.BagError, e:
+        print 'Error registering Bag: %s' % e
+        print 'Try to validate the Bag and then try re-adding it.'
 
 
 def edit(args):
@@ -172,7 +178,7 @@ def user_build_new_obj(obj, model):
     for attr, opts in obj.writeopts():
         if attr == 'created':
             value = str(datetime.now())
-        elif model == 'bag' and attr == 'payload' and obj.payload:
+        elif model == 'bag' and attr == 'payload':
             continue
         else:
             value = get_user_input(obj, attr, opts, no_prefill=True)
