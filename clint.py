@@ -181,7 +181,10 @@ def user_build_new_obj(obj, model):
         elif model == 'bag' and attr == 'payload':
             continue
         else:
-            value = get_user_input(obj, attr, opts, no_prefill=True)
+            if model == 'item' and attr == 'collection':
+                value = get_user_input(obj, attr, opts, no_prefill=False)
+            else:
+                value = get_user_input(obj, attr, opts, no_prefill=True)
         setattr(obj, attr, value)
 
 
@@ -193,6 +196,9 @@ def user_edit_obj(obj):
 
 
 def get_user_input(obj, attr, opts, no_prefill=False):
+    if attr == 'collection' and not getattr(obj, attr) and obj.project:
+        setattr(obj, attr, obj.project.collection)
+
     if opts:
         optlist = ', '.join(['%s=%s' % (k, v) for k, v in opts.items()])
         prompt = '%s [Options: %s]: ' % (attr, optlist)
@@ -201,7 +207,7 @@ def get_user_input(obj, attr, opts, no_prefill=False):
     if no_prefill or not getattr(obj, attr):
         prefill = ''
     else:
-        if hasattr(obj, 'relations') and attr in obj.relations:
+        if (hasattr(obj, 'relations') and attr in obj.relations) or (getattr(obj, attr) and hasattr(getattr(obj, attr), 'id')):
             prefill = getattr(obj, attr).id
         else:
             prefill = getattr(obj, attr)
