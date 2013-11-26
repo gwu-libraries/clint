@@ -70,7 +70,7 @@ def ls(args):
                 if 'name' in obj.keys():
                     print 'name: %s' % obj.pop('name')
                 elif 'title' in obj.keys():
-                    print 'title: %s' % obj.pop('title')
+                    print 'title: %s' % obj.pop('title').encode('utf-8')
                 for k in sorted(obj.keys()):
                     print '%s: %s' % (k, obj[k])
             print '----------\n%s total %ss' % (len(objects), args.model)
