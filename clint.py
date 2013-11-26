@@ -9,6 +9,7 @@ from pprint import pprint
 import readline
 import shutil
 import ast
+import sys
 
 import bagit
 
@@ -87,10 +88,10 @@ def show(args):
         else:
             print obj.to_string()
     except inv.Inventory404, e:
-        print 'No record found for %s %s' % (args.model, args.id)
+        sys.exit('No record found for %s %s' % (args.model, args.id))
     except Exception, e:
-        print 'Error fetching data!', e
         log.exception('Error fetching %s "%s"' % (args.model, args.id))
+        sys.exit('Error fetching data: %s' % e.msg)
 
 
 def add(args):
@@ -116,10 +117,9 @@ def add(args):
                 print '%s Created!\n' % args.model.capitalize()
             print obj.to_string()
     except inv.Inventory404, e:
-        print 'Error creating record: %s' % e.msg
+        sys.exit('Error creating record: %s' % e.msg)
     except bagit.BagError, e:
-        print 'Error registering Bag: %s' % e
-        print 'Try to validate the Bag and then try re-adding it.'
+        sys.exit('Error registering Bag: %s\nTry to validate the Bag and then try re-adding it.' % e)
 
 
 def edit(args):
@@ -133,8 +133,7 @@ def edit(args):
         else:
             print obj.to_string()
     except inv.Inventory404, e:
-        print 'No record found for %s %s' % (args.model, args.id)
-        return
+        sys.exit('No record found for %s %s' % (args.model, args.id))
     try:
         edits = [a for a in obj.readwrite()
                  if getattr(args, a, None) is not None]
@@ -150,7 +149,7 @@ def edit(args):
             print '\n%s Edited!\n' % args.model.capitalize()
             print obj.to_string()
     except inv.Inventory404, e:
-        print 'Error editing record: %s' % e.msg
+        sys.exit('Error editing record: %s' % e.msg)
 
 
 def delete(args):
@@ -170,7 +169,7 @@ def delete(args):
         else:
             log.exception('response.status_code: %s' % response.status_code)
             log.debug('response.text: %s' % response.text)
-            print 'Error deleting %s %s' % (args.model, args.id)
+            sys.exit('Error deleting %s %s' % (args.model, args.id))
 
 
 def user_build_new_obj(obj, model):
@@ -335,8 +334,7 @@ def bag(args):
         if ans.upper() in ['Y', 'YES']:
             rebag(args)
     except Exception, e:
-        print 'Error making bag\n%s' % e
-        raise
+        sys.exit('Error making bag\n%s' % e)
 
 
 def rebag(args):
@@ -388,9 +386,9 @@ def validate(args):
             else:
                 print 'Bag is valid, but not registered with Inventory.'
         else:
-            print 'Bag is NOT valid'
+            sys.exit('Bag is NOT valid')
     except bagit.BagError:
-        print 'Bag is NOT valid'
+        sys.exit('Bag is NOT valid')
 
 
 def copy(args):
@@ -629,6 +627,8 @@ def main():
 
     args = parser.parse_args()
     args.func(args)
+
+    sys.exit(0)
 
 
 if __name__ == '__main__':
