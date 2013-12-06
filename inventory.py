@@ -799,12 +799,14 @@ class BagAction(JSONSerializable):
             '1': 'updated',
             '2': 'moved',
             '3': 'validated',
-            '4': 'imported'
+            '4': 'imported to DSpace',
+            '5': 'added'
         }
     }
 
-    def __init__(self, bag='', timestamp='', action='', note=''):
+    def __init__(self, id=None, bag=None, timestamp='', action='', note=''):
         self.__loaded = False
+        self.__id = id
         self.bag = bag
         self.timestamp = timestamp
         self.action = action

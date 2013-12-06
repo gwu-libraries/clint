@@ -39,10 +39,11 @@ move <id>
 validate <id>
 '''
 # reference variables
-models = ['machine', 'collection', 'project', 'item', 'bag']
+models = ['machine', 'collection', 'project', 'item', 'bag', 'bag_action']
 orig_item_types = ['book', 'microfilm', 'audio', 'video', 'mixed',
                    'other']
 bag_types = ['access', 'preservation', 'export']
+actions = ['updated', 'moved', 'validated', 'imported to DSpace', 'added']
 
 
 def ls(args):
@@ -50,10 +51,10 @@ def ls(args):
     params = {}
     for model in models:
         if model in args:
-            val = getattr(args, model)
+            val = getattr(args, model.replace('_', ''))
             if val is not None and val != '':
                 params[model] = val
-    res = inv._get(model=args.model, params=params)
+    res = inv._get(model=args.model.replace('_', ''), params=params)
     data = res.json()
     if args.json:
         print json.dumps(data, indent=2)
@@ -81,6 +82,8 @@ def show(args):
     try:
         if args.local_id:
             obj = globals()[args.model.capitalize()](local_id=args.id)
+        elif args.model == 'bag_action':
+            obj = globals()[args.model.title().replace('_', '')](args.id)
         else:
             obj = globals()[args.model.capitalize()](args.id)
         if args.json:
@@ -96,7 +99,10 @@ def show(args):
 
 def add(args):
     try:
-        obj = globals()[args.model.capitalize()]()
+        if args.model == 'bag_action':
+            obj = globals()[args.model.title().replace('_', '')]()
+        else:
+            obj = globals()[args.model.capitalize()]()
         vals = [a for a in obj.readwrite()
                 if getattr(args, a, None) is not None]
         for attr in vals:
@@ -113,6 +119,8 @@ def add(args):
         else:
             if args.model == 'bag':
                 print '%s added!\n' % args.model.capitalize()
+            elif args.model == 'bag_action':
+                print '%s recorded!\n' % args.model.title().replace('_', '')
             else:
                 print '%s Created!\n' % args.model.capitalize()
             print obj.to_string()
@@ -126,6 +134,8 @@ def edit(args):
     try:
         if 'local_id' in args and args.local_id:
             obj = globals()[args.model.capitalize()](local_id=args.local_id)
+        elif args.model == 'bag_action':
+            obj = globals()[args.model.title().replace('_', '')](args.id)
         else:
             obj = globals()[args.model.capitalize()](args.id)
         if args.json:
@@ -146,7 +156,10 @@ def edit(args):
         if args.json:
             print json.dumps(obj.as_json, indent=2)
         else:
-            print '\n%s Edited!\n' % args.model.capitalize()
+            if args.model == 'bag_action':
+                print '\n%s Edited!\n' % args.model.title().replace('_', '')
+            else:
+                print '\n%s Edited!\n' % args.model.capitalize()
             print obj.to_string()
     except inv.Inventory404, e:
         sys.exit('Error editing record: %s' % e.msg)
@@ -158,7 +171,7 @@ def delete(args):
         ans = raw_input('Please confirm by typing "Yes": ')
         if ans != 'Yes':
             return
-    response = inv._delete(args.model, args.id)
+    response = inv._delete(args.model.replace('_', ''), args.id)
     if args.json:
         # TODO: status code perhaps? see
         # https://github.com/gwu-libraries/clint/issues/49
@@ -173,7 +186,10 @@ def delete(args):
 
 
 def user_build_new_obj(obj, model):
-    print 'Enter field values for new %s' % model
+    if model == 'bag_action':
+        print 'Enter field values for new %s' % model.title().replace('_', '')
+    else:
+        print 'Enter field values for new %s' % model
     for attr, opts in obj.writeopts():
         if attr == 'created':
             value = str(datetime.now())
@@ -471,6 +487,16 @@ def main():
     listm.add_argument('-o', '--notes', help='Notes about the machine')
     listm.add_argument('--model', default='machine')
 
+    listba = listsubpar.add_parser('bag_action',
+                                   help='Record a bag action in Inventory')
+    listba.add_argument('-b', '--bag', help='System identifier of the Bag')
+    listba.add_argument('-t', '--timestamp',
+                        help='Timestamp of the performed action')
+    listba.add_argument('-a', '--action', help='Type of Bag action',
+                        choices=actions)
+    listba.add_argument('-n', '--note', help='Notes about the Bag action')
+    listba.add_argument('--model', default='bag_action')
+
     # parser for the "add" command
     add_parser = subparsers.add_parser('add',
         help='Add a new object to the Inventory')
@@ -526,6 +552,17 @@ def main():
     addm.add_argument('-i', '--ip', help='IP address of the machine')
     addm.add_argument('-o', '--notes', help='Notes about the machine')
     addm.add_argument('--model', default='machine')
+
+    # add an bag_action
+    addba = addsubpar.add_parser('bag_action',
+                                 help='Record a bag action in Inventory')
+    addba.add_argument('-b', '--bag', help='System identifier of the Bag')
+    addba.add_argument('-t', '--timestamp',
+                       help='Timestamp of the performed action')
+    addba.add_argument('-a', '--action', help='Type of Bag action',
+                       choices=actions)
+    addba.add_argument('-n', '--note', help='Notes about the Bag action')
+    addba.add_argument('--model', default='bag_action')
 
     # parser for the "edit" command
     edit_parser = subparsers.add_parser('edit',
@@ -586,6 +623,18 @@ def main():
     editm.add_argument('-i', '--ip', help='IP address of the machine')
     editm.add_argument('-o', '--notes', help='Notes about the machine')
     editm.add_argument('--model', default='machine')
+
+    # edit bag_action
+    editba = editsubpar.add_parser('bag_action',
+                                   help='Edit a Bag action in Inventory')
+    editba.add_argument('id', help='identifier of the Bag action record')
+    editba.add_argument('-b', '--bag', help='System identifier of the Bag')
+    editba.add_argument('-t', '--timestamp',
+                        help='Timestamp of the performed action')
+    editba.add_argument('-a', '--action', help='Type of Bag action',
+                        choices=actions)
+    editba.add_argument('-n', '--note', help='Notes about the Bag action')
+    editba.add_argument('--model', default='bag_action')
 
     # parser for the "delete" command
     del_parser = subparsers.add_parser('delete',
