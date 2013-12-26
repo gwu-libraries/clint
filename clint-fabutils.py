@@ -1,15 +1,17 @@
 import os
 
 from fabric.operations import put
-from fabric.api import run, quiet
+from fabric.api import run, quiet, env
+
+env.always_use_pty = False
 
 
-def rsync(local, remote):
+def rsync(local, remote, sudo=False):
     if not os.path.exists(local):
         raise IOError("Invalid directory '%s'" % local)
     if not os.access(local, os.R_OK):
         raise IOError("Cannot read directory '%s'" % local)
-    put(local, remote)
+    put(local, remote, use_sudo=sudo)
 
 
 def space_available(local, remote_drive):
@@ -57,9 +59,13 @@ def _test(flags, path):
     """ Run arbitrary 'test' command on remote machine.
     """
     with quiet():
-        return run('test %s %s' % (flags, path)).return_code == 0
+        result = run('test %s %s' % (flags, path))
+        return result.return_code
 
 
 def copy_bag(local, remote, remote_drive):
     if space_available(local, remote_drive):
-        rsync(local, remote)
+        if is_remote_writable(remote):
+            rsync(local, remote)
+        else:
+            rsync(local, remote, sudo=True)
