@@ -6,6 +6,29 @@ from fabric.api import run, quiet, env
 env.always_use_pty = False
 
 
+def create_bag(local, base_name, machine_id, item_id, access_path):
+    if not os.path.exists(local):
+        raise IOError("Invalid directory '%s'" % local)
+    if not os.access(local, os.R_OK) and not not os.access(local, os.W_OK):
+        raise IOError("Insufficient permissions '%s'" % local)
+    bag_cmd = ['./clint', 'bag', local,
+               '-n', base_name,
+               '-t', 'preservation',
+               '-m', str(machine_id),
+               '-i', item_id,
+               '-p', access_path]
+    run("%s" % bag_cmd)
+
+
+def register_item(title, base_name, collection_id, item_type):
+    register_cmd = ['./clint', 'add', 'item',
+                    '-t', title,
+                    '-l', base_name,
+                    '-c', collection_id,
+                    '-o', item_type]
+    run("%s" % register_cmd)
+
+
 def rsync(local, remote, sudo=False):
     if not os.path.exists(local):
         raise IOError("Invalid directory '%s'" % local)
@@ -64,6 +87,7 @@ def _test(flags, path):
 
 
 def copy_bag(local, remote, remote_drive):
+    create_bag(local)
     if space_available(local, remote_drive):
         if is_remote_writable(remote):
             rsync(local, remote)
