@@ -87,7 +87,6 @@ def _test(flags, path):
 
 
 def copy_bag(local, remote, remote_drive):
-    create_bag(local)
     if space_available(local, remote_drive):
         if is_remote_writable(remote):
             rsync(local, remote)
