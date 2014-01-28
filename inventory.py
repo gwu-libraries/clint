@@ -505,7 +505,7 @@ class Item(JSONSerializable):
                 if len(self._data['objects']) > 1:
                     raise NonUniqueIdentifierError(self.local_id)
                 elif len(self._data['objects']) == 0:
-                    print 'no objects'
+                    log.debug('no objects')
                     raise Inventory404('Item identified by %s not found' %
                                        self.__id)
                 else:
