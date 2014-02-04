@@ -1,4 +1,3 @@
 bagit
 fabric
 requests
-readline

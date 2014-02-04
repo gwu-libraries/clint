@@ -180,7 +180,10 @@ def user_build_new_obj(obj, model):
         elif model == 'bag' and attr == 'payload':
             continue
         else:
-            value = get_user_input(obj, attr, opts, no_prefill=True)
+            if model == 'item' and attr == 'collection':
+                value = get_user_input(obj, attr, opts, no_prefill=False)
+            else:
+                value = get_user_input(obj, attr, opts, no_prefill=True)
         setattr(obj, attr, value)
 
 
@@ -192,6 +195,9 @@ def user_edit_obj(obj):
 
 
 def get_user_input(obj, attr, opts, no_prefill=False):
+    if attr == 'collection' and not getattr(obj, attr) and obj.project:
+        setattr(obj, attr, obj.project.collection)
+
     if opts:
         optlist = ', '.join(['%s=%s' % (k, v) for k, v in opts.items()])
         prompt = '%s [Options: %s]: ' % (attr, optlist)
@@ -200,7 +206,8 @@ def get_user_input(obj, attr, opts, no_prefill=False):
     if no_prefill or not getattr(obj, attr):
         prefill = ''
     else:
-        if hasattr(obj, 'relations') and attr in obj.relations:
+        if (hasattr(obj, 'relations') and attr in obj.relations) \
+                or (getattr(obj, attr) and hasattr(getattr(obj, attr), 'id')):
             prefill = getattr(obj, attr).id
         else:
             prefill = getattr(obj, attr)
@@ -226,14 +233,16 @@ def bag(args):
         addb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
         addb.add_argument('-t', '--bagtype', choices=bag_types,
                           help='Type of bag')
-        addb.add_argument('-p', '--path', help='Path to bag from server root', dest='absolute_filesystem_path')
+        addb.add_argument('-p', '--path',
+                          help='Path to bag from server root',
+                          dest='absolute_filesystem_path')
         addb.add_argument('-y', '--payload', help='Payload of the bag')
         addb.add_argument('-m', '--machine',
-            help='Machine this bag is stored on')
+                          help='Machine this bag is stored on')
         addb.add_argument('-i', '--item',
-            help='Item this bag is associated with')
+                          help='Item this bag is associated with')
         addb.add_argument('-c', '--created',
-            help='Timestamp when this bag was created')
+                          help='Timestamp when this bag was created')
         addb.add_argument('--model', default='bag')
         addb.add_argument('--force',
                           help='Forcefully bag an existing bag path',
@@ -247,7 +256,7 @@ def bag(args):
         if bag.is_valid():
             bag_args = addb.parse_args(args.remainder)
             if not bag_args.__contains__('force'):
-                print 'The path provided is already a Bag. If you want to rebag an existing Bag use command "./clint rebag <PATH_TO_BAG>". If you want to forcefully bag an existing Bag, use the --force flag.'
+                print """The path provided is already a Bag. If you want to rebag an existing Bag use command "./clint rebag <PATH_TO_BAG>". If you want to forcefully bag an existing Bag, use the --force flag."""
                 create_bag_ans = raw_input('Are you sure you want to continue and'
                                            ' create a new Bag for the path - <' +
                                            args.path + '>?(y or n):')
@@ -261,7 +270,8 @@ def bag(args):
         print 'Creating new Bag for path - <' + args.path + '>'
 
     try:
-        #Additional params to be passed to Bagit to be included in the bag-info.txt file
+        # Additional params to be passed to Bagit to be included in
+        # the bag-info.txt file
         params = {}
         if args.remainder:
             bag_args = addb.parse_args(args.remainder)
@@ -426,45 +436,48 @@ def main():
     # add subparsers for each kind of object
     listsubpar = list_parser.add_subparsers()
     # list collection
-    listc = listsubpar.add_parser('collection', help='List collections in Inventory')
+    listc = listsubpar.add_parser('collection',
+                                  help='List collections in Inventory')
     listc.add_argument('-n', '--name', help='Name of the Collection')
     listc.add_argument('-d', '--description',
-        help='Description of the Collection')
-    listc.add_argument('-m', '--contact_person', help='Contact Person of the Collection')
-    listc.add_argument('-l', '--local_id', help='Local identifier of the Collection')
+                       help='Description of the Collection')
+    listc.add_argument('-m', '--contact_person',
+                       help='Contact Person of the Collection')
+    listc.add_argument('-l', '--local_id',
+                       help='Local identifier of the Collection')
     listc.add_argument('--model', default='collection')
     # add project
     listp = listsubpar.add_parser('project', help='Add a project to Inventory')
     listp.add_argument('-n', '--name', help='Name of the project')
     listp.add_argument('-c', '--collection',
-        help='ID of the collection this project feeds')
+                       help='ID of the collection this project feeds')
     listp.add_argument('--model', default='project')
     # add item
     listi = listsubpar.add_parser('item', help='Add an item to Inventory')
     listi.add_argument('-t', '--title', help='Title of the item')
     listi.add_argument('-l', '--local_id', help='Alt/local ID of the item')
     listi.add_argument('-p', '--project',
-        help='Project this item is associated with')
+                       help='Project this item is associated with')
     listi.add_argument('-c', '--collection',
-        help='Collection this item is associated with')
+                       help='Collection this item is associated with')
     listi.add_argument('-o', '--original-item-type', choices=orig_item_types,
-        help='The type of object this digital item came from')
+                       help='The type of object this digital item came from')
     listi.add_argument('-n', '--notes', help='Notes about the item')
     listi.add_argument('--model', default='item')
     # add bag
     listb = listsubpar.add_parser('bag', help='Add a bag to the Inventory')
     listb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
     listb.add_argument('-t', '--bagtype', choices=bag_types,
-        help='Type of bag')
+                       help='Type of bag')
     listb.add_argument('-p', '--path', help='Path to bag from server root')
     listb.add_argument('-m', '--machine', help='Machine this bag is stored on')
     listb.add_argument('-i', '--item', help='Item this bag is associated with')
     listb.add_argument('-c', '--created',
-        help='Timestamp when this bag was created')
+                       help='Timestamp when this bag was created')
     listb.add_argument('--model', default='bag')
     # add machine
     listm = listsubpar.add_parser('machine',
-        help='Add a machine to the Inventory')
+                                  help='Add a machine to the Inventory')
     listm.add_argument('-n', '--name', help='Name of the machine')
     listm.add_argument('-u', '--url', help='URL of the machine')
     listm.add_argument('-i', '--ip', help='IP address of the machine')
