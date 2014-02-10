@@ -1,6 +1,7 @@
 #! ENV/bin/python
 
 import argparse
+import ast
 from datetime import datetime
 import json
 import logging
@@ -8,7 +9,7 @@ import os
 from pprint import pprint
 import readline
 import shutil
-import ast
+import sys
 
 import bagit
 
@@ -70,7 +71,7 @@ def ls(args):
                 if 'name' in obj.keys():
                     print 'name: %s' % obj.pop('name')
                 elif 'title' in obj.keys():
-                    print 'title: %s' % obj.pop('title')
+                    print 'title: %s' % obj.pop('title').encode('utf-8')
                 for k in sorted(obj.keys()):
                     print '%s: %s' % (k, obj[k])
             print '----------\n%s total %ss' % (len(objects), args.model)
@@ -87,10 +88,10 @@ def show(args):
         else:
             print obj.to_string()
     except inv.Inventory404, e:
-        print 'No record found for %s %s' % (args.model, args.id)
+        sys.exit('No record found for %s %s' % (args.model, args.id))
     except Exception, e:
-        print 'Error fetching data!', e
         log.exception('Error fetching %s "%s"' % (args.model, args.id))
+        sys.exit('Error fetching data: %s' % e.msg)
 
 
 def add(args):
@@ -103,6 +104,9 @@ def add(args):
         # if no optional args passed, get metadata from user
         if vals == []:
             user_build_new_obj(obj, args.model)
+        if args.model == 'bag':
+            bag = bagit.Bag(obj.absolute_filesystem_path)
+            obj.payload = build_bag_payload(bag, obj.absolute_filesystem_path)
         obj.save()
         if args.json:
             print json.dumps(obj.as_json, indent=2)
@@ -113,7 +117,9 @@ def add(args):
                 print '%s Created!\n' % args.model.capitalize()
             print obj.to_string()
     except inv.Inventory404, e:
-        print 'Error creating record: %s' % e.msg
+        sys.exit('Error creating record: %s' % e.msg)
+    except bagit.BagError, e:
+        sys.exit('Error registering Bag: %s\nTry to validate the Bag and then try re-adding it.' % e)
 
 
 def edit(args):
@@ -127,8 +133,7 @@ def edit(args):
         else:
             print obj.to_string()
     except inv.Inventory404, e:
-        print 'No record found for %s %s' % (args.model, args.id)
-        return
+        sys.exit('No record found for %s %s' % (args.model, args.id))
     try:
         edits = [a for a in obj.readwrite()
                  if getattr(args, a, None) is not None]
@@ -144,7 +149,7 @@ def edit(args):
             print '\n%s Edited!\n' % args.model.capitalize()
             print obj.to_string()
     except inv.Inventory404, e:
-        print 'Error editing record: %s' % e.msg
+        sys.exit('Error editing record: %s' % e.msg)
 
 
 def delete(args):
@@ -164,7 +169,7 @@ def delete(args):
         else:
             log.exception('response.status_code: %s' % response.status_code)
             log.debug('response.text: %s' % response.text)
-            print 'Error deleting %s %s' % (args.model, args.id)
+            sys.exit('Error deleting %s %s' % (args.model, args.id))
 
 
 def user_build_new_obj(obj, model):
@@ -172,7 +177,7 @@ def user_build_new_obj(obj, model):
     for attr, opts in obj.writeopts():
         if attr == 'created':
             value = str(datetime.now())
-        elif model == 'bag' and attr == 'payload' and obj.payload:
+        elif model == 'bag' and attr == 'payload':
             continue
         else:
             value = get_user_input(obj, attr, opts, no_prefill=True)
@@ -329,8 +334,7 @@ def bag(args):
         if ans.upper() in ['Y', 'YES']:
             rebag(args)
     except Exception, e:
-        print 'Error making bag\n%s' % e
-        raise
+        sys.exit('Error making bag\n%s' % e)
 
 
 def rebag(args):
@@ -382,9 +386,9 @@ def validate(args):
             else:
                 print 'Bag is valid, but not registered with Inventory.'
         else:
-            print 'Bag is NOT valid'
+            sys.exit('Bag is NOT valid')
     except bagit.BagError:
-        print 'Bag is NOT valid'
+        sys.exit('Bag is NOT valid')
 
 
 def copy(args):
@@ -623,6 +627,8 @@ def main():
 
     args = parser.parse_args()
     args.func(args)
+
+    sys.exit(0)
 
 
 if __name__ == '__main__':
