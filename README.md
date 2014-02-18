@@ -15,7 +15,7 @@ Part I - Initial dependencies
 
 1. Install Git if not already installed
 
-        $ sudo apt-get install git-core
+        $ sudo apt-get install git-core python-dev
 
 2. Install virtualenv if not already installed
 
