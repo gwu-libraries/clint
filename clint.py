@@ -198,6 +198,9 @@ def user_build_new_obj(obj, model):
         else:
             if model == 'item' and attr == 'collection':
                 value = get_user_input(obj, attr, opts, no_prefill=False)
+            elif model == 'bag_action' and attr == 'timestamp':
+                obj.timestamp = str(datetime.now())
+                value = get_user_input(obj, attr, opts, no_prefill=False)
             else:
                 value = get_user_input(obj, attr, opts, no_prefill=True)
         setattr(obj, attr, value)
