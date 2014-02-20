@@ -3,6 +3,8 @@ import os
 from fabric.operations import put
 from fabric.api import run, quiet, env
 
+import settings
+
 env.always_use_pty = False
 
 
@@ -39,13 +41,23 @@ def rsync(local, remote, sudo=False):
 
 def space_available(local, remote_drive):
     filesize = os.path.getsize(local)
-    x = run("df -hP | awk 'NR>1{print $1,$4}' | sed -e's/%//g'")
-    drives = dict([y.split() for y in x.split('\n')])
-    for drive, space in drives.iteritems():
-        if drive == remote_drive:
-            free_space = convert_2_bytes(space)
-            if free_space > int(filesize):
-                return True
+    x = run("df -hP | awk 'NR>1{print $1,$2,$4}' | sed -e's/%//g'")
+    # create a list of lists with first item being the drive
+    # second item being the total space
+    # and the third item being free space
+    drives = [y.split() for y in x.split('\n')]
+    for item in drives:
+        if item[0] == remote_drive:
+            free_space = convert_2_bytes(item[2])
+            total_space = convert_2_bytes(item[1])
+            percent_free_space = (free_space / total_space) * 100
+            if percent_free_space > settings.FREE_PARTITION_SPACE:
+                avail_space = free_space - (settings.FREE_PARTITION_SPACE
+                                            / 100) * total_space
+                if avail_space > int(filesize):
+                    return True
+                else:
+                    return False
             else:
                 return False
     return False
