@@ -3,6 +3,7 @@
 import argparse
 import ast
 from datetime import datetime
+import glob
 import json
 import logging
 import os
@@ -238,6 +239,9 @@ def get_user_input(obj, attr, opts, no_prefill=False):
         else:
             prefill = getattr(obj, attr)
     readline.set_startup_hook(lambda: readline.insert_text(prefill))
+    readline.set_completer_delims(' \t\n;')
+    readline.parse_and_bind("tab: complete")
+    readline.set_completer(complete)
     try:
         return raw_input(prompt)
     finally:
@@ -438,6 +442,13 @@ def copy(args):
 
 def move(args):
     print 'Move operations not supported yet'
+
+
+#This function is set as a completer for readline
+# to enable tab autocomplete for file paths while
+# reading input from user
+def complete(text, state):
+    return (glob.glob(text + '*') + [None])[state]
 
 
 def main():
