@@ -124,6 +124,13 @@ def add(args):
             else:
                 print '%s Created!\n' % args.model.capitalize()
             print obj.to_string()
+
+        #Record an action
+        if args.model == 'bag':
+            action = BagAction(bag=obj.id, timestamp=str(datetime.now()),
+                               action='5', note='initiated by clint')
+            action.save()
+
     except inv.Inventory404, e:
         sys.exit('Error creating record: %s' % e.msg)
     except bagit.BagError, e:
@@ -355,6 +362,11 @@ def bag(args):
             print json.dumps(obj.as_json, indent=2)
         else:
             print obj.to_string()
+
+        #Record an action
+        action = BagAction(bag=obj.id, timestamp=str(datetime.now()),
+                           action='5', note='initiated by clint')
+        action.save()
     except OSError:
         print 'Bag already exists'
         ans = ''
