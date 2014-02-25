@@ -31,6 +31,8 @@ inventory_sandbox = {
     'url': '',
     'verify_ssl_cert': False
 }
+# the path to clint instance on remote server
+CLINT_INSTALLATION_PATH = ''
 
 try:
     from local_settings import *
