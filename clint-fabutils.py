@@ -29,6 +29,17 @@ def register_item(title, base_name, collection_id, item_type):
     run("%s" % register_cmd)
 
 
+def add_bag(bag_name, bag_type, bag_path, machine_id, item_id):
+    bag_cmd = ['./clint', 'add', 'bag',
+               '-n', bag_name,
+               '-p', bag_path,
+               '-m', machine_id,
+               '-t', bag_type,
+               '-i', item_id
+               ]
+    run("%s" % bag_cmd)
+
+
 def rsync(local, remote, sudo=False):
     if not os.path.exists(local):
         raise IOError("Invalid directory '%s'" % local)
