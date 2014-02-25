@@ -15,7 +15,7 @@ def create_bag(local, base_name, machine_id, item_id, access_path):
         raise IOError("Insufficient permissions '%s'" % local)
     bag_cmd = ['./clint', 'bag', local,
                '-n', base_name,
-               '-t`', 'preservation',
+               '-t', 'preservation',
                '-m', str(machine_id),
                '-i', item_id,
                '-p', access_path]
