@@ -51,7 +51,6 @@ def space_available(local, remote_drive):
             free_space = convert_2_bytes(item[2])
             total_space = convert_2_bytes(item[1])
             percent_free_space = 100 - int(item[3])
-            print percent_free_space
             if percent_free_space > settings.FREE_PARTITION_SPACE:
                 avail_space = free_space - (settings.FREE_PARTITION_SPACE
                                             / 100) * total_space
