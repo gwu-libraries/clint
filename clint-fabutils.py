@@ -33,7 +33,7 @@ def register_item(title, base_name, collection_id, item_type):
 
 def add_bag(bag_name, bag_type, bag_path, machine_id, item_id):
     with cd(settings.CLINT_INSTALLATION_PATH):
-        bag_cmd = ['/home/gilani/projects/clint/clint', 'add', 'bag',
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + '/clint', 'add', 'bag',
                    '-n', bag_name,
                    '-p', bag_path,
                    '-m', machine_id,
