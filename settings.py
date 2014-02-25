@@ -32,6 +32,8 @@ inventory_sandbox = {
     'verify_ssl_cert': False
 }
 
+FREE_PARTITION_SPACE = 10
+
 try:
     from local_settings import *
 except ImportError:
