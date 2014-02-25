@@ -15,7 +15,7 @@ def create_bag(local, base_name, machine_id, item_id, access_path):
         raise IOError("Insufficient permissions '%s'" % local)
     bag_cmd = ['./clint', 'bag', local,
                '-n', base_name,
-               '-t', 'preservation',
+               '-t`', 'preservation',
                '-m', str(machine_id),
                '-i', item_id,
                '-p', access_path]
@@ -41,7 +41,7 @@ def rsync(local, remote, sudo=False):
 
 def space_available(local, remote_drive):
     filesize = os.path.getsize(local)
-    x = run("df -hP | awk 'NR>1{print $1,$2,$4}' | sed -e's/%//g'")
+    x = run("df -hP | awk 'NR>1{print $1,$2,$4,$5}' | sed -e's/%//g'")
     # create a list of lists with first item being the drive
     # second item being the total space
     # and the third item being free space
@@ -50,7 +50,8 @@ def space_available(local, remote_drive):
         if item[0] == remote_drive:
             free_space = convert_2_bytes(item[2])
             total_space = convert_2_bytes(item[1])
-            percent_free_space = (free_space / total_space) * 100
+            percent_free_space = 100 - int(item[3])
+            print percent_free_space
             if percent_free_space > settings.FREE_PARTITION_SPACE:
                 avail_space = free_space - (settings.FREE_PARTITION_SPACE
                                             / 100) * total_space
