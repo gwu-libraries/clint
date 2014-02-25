@@ -15,13 +15,15 @@ def create_bag(local, base_name, machine_id, item_id, access_path):
         raise IOError("Invalid directory '%s'" % local)
     if not os.access(local, os.R_OK) and not not os.access(local, os.W_OK):
         raise IOError("Insufficient permissions '%s'" % local)
-    bag_cmd = ['./clint', 'bag', local,
-               '-n', base_name,
-               '-t', 'preservation',
-               '-m', str(machine_id),
-               '-i', item_id,
-               '-p', access_path]
-    run("%s" % bag_cmd)
+    with cd(settings.CLINT_INSTALLATION_PATH):
+        bag_cmd = ['./clint', 'bag', local,
+                   '-n', base_name,
+                   '-t', 'preservation',
+                   '-m', str(machine_id),
+                   '-i', item_id,
+                   '-p', access_path]
+        run("source ENV/bin/activate")
+        run(" ".join(bag_cmd))
 
 
 def register_item(title, base_name, collection_id, item_type):
@@ -42,6 +44,14 @@ def add_bag(bag_name, bag_type, bag_path, machine_id, item_id):
                    '-t', bag_type,
                    '-i', item_id
                    ]
+        run("source ENV/bin/activate")
+        run(" ".join(bag_cmd))
+
+
+def validate_bag(bag_path):
+    with cd(settings.CLINT_INSTALLATION_PATH):
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + '/clint', 'validate',
+                   bag_path]
         run("source ENV/bin/activate")
         run(" ".join(bag_cmd))
 
