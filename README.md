@@ -51,7 +51,11 @@ Part II - Download the project
 
 Part III - Configure your instance
 
-9. Update the values in the settings file to point to your production and sandbox instances of Inventory
+9. Copy the settings template to an active file
+
+        $ cp settings.py.template settings.py
+
+10. Update the values in the settings file to point to your production and sandbox instances of Inventory
 
         (ENV)$ vim settings.py
 
