@@ -432,8 +432,9 @@ def validate(args):
                 print 'Bag is valid, but not registered with Inventory.'
         else:
             sys.exit('Bag is NOT valid')
-    except bagit.BagError:
-        sys.exit('Bag is NOT valid')
+    except bagit.BagError,  e:
+        log.exception('Bag is NOT valid.\n' + e)
+        sys.exit('Bag is NOT valid.\n' + e.message)
 
 
 def copy(args):
