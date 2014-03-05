@@ -8,6 +8,7 @@ import settings
 import settings
 
 env.always_use_pty = False
+item_id = ''
 
 
 def create_bag(local, base_name, machine_id, item_id, access_path):
@@ -16,7 +17,7 @@ def create_bag(local, base_name, machine_id, item_id, access_path):
     if not os.access(local, os.R_OK) and not not os.access(local, os.W_OK):
         raise IOError("Insufficient permissions '%s'" % local)
     with cd(settings.CLINT_INSTALLATION_PATH):
-        bag_cmd = ['./clint', 'bag', local,
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'bag', local,
                    '-n', base_name,
                    '-t', 'preservation',
                    '-m', str(machine_id),
@@ -27,17 +28,24 @@ def create_bag(local, base_name, machine_id, item_id, access_path):
 
 
 def register_item(title, base_name, collection_id, item_type):
-    register_cmd = ['./clint', 'add', 'item',
-                    '-t', title,
-                    '-l', base_name,
-                    '-c', collection_id,
-                    '-o', item_type]
-    run("%s" % register_cmd)
+    global item_id
+    with cd(settings.CLINT_INSTALLATION_PATH):
+        register_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'add',
+                        'item',
+                        '-t', title,
+                        '-l', base_name,
+                        '-c', collection_id,
+                        '-o', item_type]
+        run("source ENV/bin/activate")
+        result = run(" ".join(register_cmd))
+        index = result.find('id:')
+        index2 = result.find('\n', index)
+        item_id = result[index+4:index2]
 
 
 def add_bag(bag_name, bag_type, bag_path, machine_id, item_id):
     with cd(settings.CLINT_INSTALLATION_PATH):
-        bag_cmd = [settings.CLINT_INSTALLATION_PATH + '/clint', 'add', 'bag',
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'add', 'bag',
                    '-n', bag_name,
                    '-p', bag_path,
                    '-m', machine_id,
@@ -50,10 +58,17 @@ def add_bag(bag_name, bag_type, bag_path, machine_id, item_id):
 
 def validate_bag(bag_path):
     with cd(settings.CLINT_INSTALLATION_PATH):
-        bag_cmd = [settings.CLINT_INSTALLATION_PATH + '/clint', 'validate',
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'validate',
                    bag_path]
         run("source ENV/bin/activate")
         run(" ".join(bag_cmd))
+
+
+def process_bag(name, col_id, item_type, b_type, b_path, mach_id, b_name):
+    global item_id
+    register_item(name, name, col_id, item_type)
+    add_bag(b_name, b_type, b_path, mach_id, item_id)
+    validate_bag(b_path)
 
 
 def rsync(local, remote, sudo=False):
