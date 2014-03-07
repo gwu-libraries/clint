@@ -18,7 +18,7 @@ from inventory import Bag, BagAction, Collection, Item, Machine, Project
 import inventory as inv
 
 
-log = logging.getLogger('clint')
+log = logging.getLogger(__name__)
 
 '''
 List of potential clint commands
@@ -433,7 +433,7 @@ def validate(args):
         else:
             sys.exit('Bag is NOT valid')
     except bagit.BagError,  e:
-        log.exception('Bag is NOT valid.\n' + e)
+        log.exception('Bag is NOT valid.\n' + str(e))
         sys.exit('Bag is NOT valid.\n' + e.message)
 
 
