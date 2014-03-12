@@ -43,7 +43,7 @@ validate <id>
 models = ['machine', 'collection', 'project', 'item', 'bag', 'bag_action']
 orig_item_types = ['book', 'microfilm', 'audio', 'video', 'mixed',
                    'other']
-bag_types = ['access', 'preservation', 'export']
+bag_types = ['Access', 'Preservation', 'Export']
 actions = ['updated', 'moved', 'validated', 'imported to DSpace', 'added']
 
 
@@ -261,7 +261,7 @@ def bag(args):
     addb = argparse.ArgumentParser()
     if args.remainder:
         addb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
-        addb.add_argument('-t', '--bagtype', choices=bag_types,
+        addb.add_argument('-t', '--bag_type', choices=bag_types,
                           help='Type of bag')
         addb.add_argument('-p', '--path',
                           help='Path to bag from server root',
@@ -328,7 +328,7 @@ def bag(args):
             addb = argparse.ArgumentParser()
             addb.add_argument('-n', '--bagname',
                               help='Identifier/name of the bag')
-            addb.add_argument('-t', '--bagtype', choices=bag_types,
+            addb.add_argument('-t', '--bag_type', choices=bag_types,
                               help='Type of bag')
             addb.add_argument('-p', '--path',
                               help='Path to bag from server root')
@@ -509,7 +509,7 @@ def main():
     # add bag
     listb = listsubpar.add_parser('bag', help='Add a bag to the Inventory')
     listb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
-    listb.add_argument('-t', '--bagtype', choices=bag_types,
+    listb.add_argument('-t', '--bag_type', choices=bag_types,
                        help='Type of bag')
     listb.add_argument('-p', '--path', help='Path to bag from server root')
     listb.add_argument('-m', '--machine', help='Machine this bag is stored on')
@@ -572,7 +572,7 @@ def main():
     # add bag
     addb = addsubpar.add_parser('bag', help='Add a bag to the Inventory')
     addb.add_argument('-n', '--bagname', help='Identifier/name of the bag')
-    addb.add_argument('-t', '--bagtype', choices=bag_types,
+    addb.add_argument('-t', '--bag_type', choices=bag_types,
         help='Type of bag')
     addb.add_argument('-p', '--path', help='Path to bag from server root', dest='absolute_filesystem_path')
     addb.add_argument('-y', '--payload', help='Payload of the bag')
@@ -644,7 +644,7 @@ def main():
     # edit bag
     editb = editsubpar.add_parser('bag', help='Edit a bag in the Inventory')
     editb.add_argument('id', help='Identifier/name of the bag')
-    editb.add_argument('-t', '--bagtype', choices=bag_types,
+    editb.add_argument('-t', '--bag_type', choices=bag_types,
         help='Type of bag')
     editb.add_argument('-p', '--path', help='Path to bag from server root')
     editb.add_argument('-y', '--payload', help='Payload of the bag')
