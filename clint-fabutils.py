@@ -4,6 +4,7 @@ from fabric.operations import put
 from fabric.api import run, quiet, env, cd
 
 import settings
+import json
 
 import settings
 
@@ -21,8 +22,7 @@ def create_bag(local, base_name, machine_id, item_id, access_path):
                    '-n', base_name,
                    '-t', 'preservation',
                    '-m', str(machine_id),
-                   '-i', item_id,
-                   '-p', access_path]
+                   '-i', item_id]
         run("source ENV/bin/activate")
         run(" ".join(bag_cmd))
 
@@ -144,3 +144,41 @@ def copy_bag(local, remote, remote_drive):
             rsync(local, remote)
         else:
             rsync(local, remote, sudo=True)
+
+
+def make_copies(mach_id, bag_id, remote_path, remote_drive):
+    bag_path, bag_type, item_id, bag_name = get_bag_path(bag_id)
+    if bag_type is None:
+        bag_type = ''
+    copy_bag(bag_path, remote_path, remote_drive)
+    add_bag(bag_name, bag_type, bag_path, mach_id, item_id)
+    validate_bag(remote_path)
+
+
+def get_machine_url(mach_id):
+    with cd(settings.CLINT_INSTALLATION_PATH):
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'show',
+                   'machine', mach_id]
+        run("source ENV/bin/activate")
+        result = run(" ".join(bag_cmd))
+        index = result.find('url:')
+        index2 = result.find('\n', index)
+        url = result[index+5:index2]
+        return url
+
+
+def get_bag_path(bag_id):
+    with cd(settings.CLINT_INSTALLATION_PATH):
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint -j', 'show',
+                   'bag', bag_id]
+        run("source ENV/bin/activate")
+        result = run(" ".join(bag_cmd))
+        result = json.loads(result)
+        bag_path = result['absolute_filesystem_path']
+        bag_type = result['bag_type']
+        bag_name = result['bagname']
+        item_id = result['item']
+        ind1 = item_id.rfind('/', 0, len(item_id) - 1)
+        ind2 = item_id.rfind('/', 0, ind1-1)
+        item_id = item_id[ind2+1: len(item_id) - 1]
+        return (bag_path, bag_type, item_id, bag_name)
