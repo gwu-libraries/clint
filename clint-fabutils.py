@@ -11,6 +11,12 @@ import settings
 env.always_use_pty = False
 item_id = ''
 
+BAG_TYPE = {
+        '1': 'access',
+        '2': 'preservation',
+        '3': 'export'
+        }
+
 
 def create_bag(local, base_name, machine_id, item_id, access_path):
     if not os.path.exists(local):
@@ -175,7 +181,7 @@ def get_bag_path(bag_id):
         result = run(" ".join(bag_cmd))
         result = json.loads(result)
         bag_path = result['absolute_filesystem_path']
-        bag_type = result['bag_type']
+        bag_type = BAG_TYPE[result['bag_type']]
         bag_name = result['bagname']
         item_id = result['item']
         ind1 = item_id.rfind('/', 0, len(item_id) - 1)
