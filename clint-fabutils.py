@@ -5,17 +5,18 @@ from fabric.api import run, quiet, env, cd
 
 import settings
 import json
+import csv
 
-import settings
+from xlrd import open_workbook
 
 env.always_use_pty = False
 item_id = ''
 
 BAG_TYPE = {
-        '1': 'access',
-        '2': 'preservation',
-        '3': 'export'
-        }
+    '1': 'access',
+    '2': 'preservation',
+    '3': 'export'
+    }
 
 
 def create_bag(local, base_name, machine_id, item_id, access_path):
@@ -75,6 +76,36 @@ def process_bag(name, col_id, item_type, b_type, b_path, mach_id, b_name):
     register_item(name, name, col_id, item_type)
     add_bag(b_name, b_type, b_path, mach_id, item_id)
     validate_bag(b_path)
+
+
+def import_collection(filename):
+    try:
+        file_extension = os.path.splitext(filename)[1]
+        if file_extension == '.csv':
+            reader = csv.DictReader(open(filename))
+            for row in reader:
+                process_bag(name=row['Item Name'], col_id=row['Collection ID'],
+                            item_type=row['Item Type'], b_type=row['Bag Type'],
+                            b_path=row['Bag Path'], mach_id=row['Machine ID'],
+                            b_name=row['Bag Name'])
+                print 'Successfully added Bag: ' + row['Bag Name']
+
+        elif file_extension in ['.xls', '.xlsx']:
+            excel_file = open_workbook(filename)
+            for sheet_name in excel_file.sheet_names():
+                sheet = excel_file.sheet_by_name(sheet_name)
+                for curr_row in range(1, sheet.nrows):
+                    row_values = sheet.row_values(curr_row)
+                    process_bag(col_id=row_values[0], name=row_values[1],
+                                item_type=row_values[2], b_name=row_values[3],
+                                b_path=row_values[4], b_type=row_values[5],
+                                mach_id=str(int(row_values[6])))
+                    print 'Successfully added Bag: ' + row_values[3]
+
+        else:
+            print 'Invalid file: ' + filename
+    except Exception, e:
+        print 'Error: ' + str(e)
 
 
 def rsync(local, remote, sudo=False):
