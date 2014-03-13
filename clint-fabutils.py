@@ -4,11 +4,19 @@ from fabric.operations import put
 from fabric.api import run, quiet, env, cd
 
 import settings
+import json
+import csv
 
-import settings
+from xlrd import open_workbook
 
 env.always_use_pty = False
 item_id = ''
+
+BAG_TYPE = {
+    '1': 'access',
+    '2': 'preservation',
+    '3': 'export'
+    }
 
 
 def create_bag(local, base_name, machine_id, item_id, access_path):
@@ -21,8 +29,7 @@ def create_bag(local, base_name, machine_id, item_id, access_path):
                    '-n', base_name,
                    '-t', 'preservation',
                    '-m', str(machine_id),
-                   '-i', item_id,
-                   '-p', access_path]
+                   '-i', item_id]
         run("source ENV/bin/activate")
         run(" ".join(bag_cmd))
 
@@ -69,6 +76,36 @@ def process_bag(name, col_id, item_type, b_type, b_path, mach_id, b_name):
     register_item(name, name, col_id, item_type)
     add_bag(b_name, b_type, b_path, mach_id, item_id)
     validate_bag(b_path)
+
+
+def import_collection(filename):
+    try:
+        file_extension = os.path.splitext(filename)[1]
+        if file_extension == '.csv':
+            reader = csv.DictReader(open(filename))
+            for row in reader:
+                process_bag(name=row['Item Name'], col_id=row['Collection ID'],
+                            item_type=row['Item Type'], b_type=row['Bag Type'],
+                            b_path=row['Bag Path'], mach_id=row['Machine ID'],
+                            b_name=row['Bag Name'])
+                print 'Successfully added Bag: ' + row['Bag Name']
+
+        elif file_extension in ['.xls', '.xlsx']:
+            excel_file = open_workbook(filename)
+            for sheet_name in excel_file.sheet_names():
+                sheet = excel_file.sheet_by_name(sheet_name)
+                for curr_row in range(1, sheet.nrows):
+                    row_values = sheet.row_values(curr_row)
+                    process_bag(col_id=row_values[0], name=row_values[1],
+                                item_type=row_values[2], b_name=row_values[3],
+                                b_path=row_values[4], b_type=row_values[5],
+                                mach_id=str(int(row_values[6])))
+                    print 'Successfully added Bag: ' + row_values[3]
+
+        else:
+            print 'Invalid file: ' + filename
+    except Exception, e:
+        print 'Error: ' + str(e)
 
 
 def rsync(local, remote, sudo=False):
@@ -144,3 +181,41 @@ def copy_bag(local, remote, remote_drive):
             rsync(local, remote)
         else:
             rsync(local, remote, sudo=True)
+
+
+def make_copies(mach_id, bag_id, remote_path, remote_drive):
+    bag_path, bag_type, item_id, bag_name = get_bag_path(bag_id)
+    if bag_type is None:
+        bag_type = ''
+    copy_bag(bag_path, remote_path, remote_drive)
+    add_bag(bag_name, bag_type, bag_path, mach_id, item_id)
+    validate_bag(remote_path)
+
+
+def get_machine_url(mach_id):
+    with cd(settings.CLINT_INSTALLATION_PATH):
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'show',
+                   'machine', mach_id]
+        run("source ENV/bin/activate")
+        result = run(" ".join(bag_cmd))
+        index = result.find('url:')
+        index2 = result.find('\n', index)
+        url = result[index+5:index2]
+        return url
+
+
+def get_bag_path(bag_id):
+    with cd(settings.CLINT_INSTALLATION_PATH):
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint -j', 'show',
+                   'bag', bag_id]
+        run("source ENV/bin/activate")
+        result = run(" ".join(bag_cmd))
+        result = json.loads(result)
+        bag_path = result['absolute_filesystem_path']
+        bag_type = BAG_TYPE[result['bag_type']]
+        bag_name = result['bagname']
+        item_id = result['item']
+        ind1 = item_id.rfind('/', 0, len(item_id) - 1)
+        ind2 = item_id.rfind('/', 0, ind1-1)
+        item_id = item_id[ind2+1: len(item_id) - 1]
+        return (bag_path, bag_type, item_id, bag_name)
