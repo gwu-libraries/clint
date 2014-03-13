@@ -18,7 +18,7 @@ from inventory import Bag, BagAction, Collection, Item, Machine, Project
 import inventory as inv
 
 
-log = logging.getLogger('clint')
+log = logging.getLogger(__name__)
 
 '''
 List of potential clint commands
@@ -414,6 +414,14 @@ def rebag(args):
 
 
 def validate(args):
+    """Validates if the Bag is validor not. This function uses the
+    bagit's 'validate' method to match file checksums. If the folder
+    structure of the Bag provided is incorrect, bagit throws an error
+    which is handled in the 'except' block. If the checksum validations
+    fail, this function exits by displaying a message in the 'else' part of
+    the outermost 'if' statement. In order to view which files have failed
+    checksum valdiation, logging level must be set to DEBUG in the settings
+    file"""
     try:
         bag = bagit.Bag(args.path)
         if bag.is_valid():
@@ -432,8 +440,8 @@ def validate(args):
                 print 'Bag is valid, but not registered with Inventory.'
         else:
             sys.exit('Bag is NOT valid')
-    except bagit.BagError:
-        sys.exit('Bag is NOT valid')
+    except bagit.BagError,  e:
+        sys.exit('Bag is NOT valid.\n' + e.message)
 
 
 def copy(args):

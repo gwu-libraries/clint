@@ -3,7 +3,7 @@
 
 import logging
 
-LOG_LEVEL = logging.ERROR
+LOG_LEVEL = logging.DEBUG
 
 #Example settings
 #INVENTORY_CREDENTIALS = {
