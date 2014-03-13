@@ -414,6 +414,14 @@ def rebag(args):
 
 
 def validate(args):
+    """Validates if the Bag is validor not. This function uses the
+    bagit's 'validate' method to match file checksums. If the folder
+    structure of the Bag provided is incorrect, bagit throws an error
+    which is handled in the 'except' block. If the checksum validations
+    fail, this function exits by displaying a message in the 'else' part of
+    the outermost 'if' statement. In order to view which files have failed
+    checksum valdiation, logging level must be set to DEBUG in the settings
+    file"""
     try:
         bag = bagit.Bag(args.path)
         if bag.is_valid():
@@ -433,7 +441,6 @@ def validate(args):
         else:
             sys.exit('Bag is NOT valid')
     except bagit.BagError,  e:
-        log.exception('Bag is NOT valid.\n' + str(e))
         sys.exit('Bag is NOT valid.\n' + e.message)
 
 
