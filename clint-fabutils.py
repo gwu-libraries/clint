@@ -13,9 +13,9 @@ env.always_use_pty = False
 item_id = ''
 
 BAG_TYPE = {
-    '1': 'access',
-    '2': 'preservation',
-    '3': 'export'
+    '1': 'Access',
+    '2': 'Preservation',
+    '3': 'Export'
     }
 
 
