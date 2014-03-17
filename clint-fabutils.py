@@ -71,9 +71,9 @@ def validate_bag(bag_path):
         run(" ".join(bag_cmd))
 
 
-def process_bag(name, col_id, item_type, b_type, b_path, mach_id, b_name):
+def process_bag(name, local_id, col_id, item_type, b_type, b_path, mach_id, b_name):
     global item_id
-    register_item(name, name, col_id, item_type)
+    register_item(name, local_id, col_id, item_type)
     add_bag(b_name, b_type, b_path, mach_id, item_id)
     validate_bag(b_path)
 
@@ -84,7 +84,8 @@ def import_collection(filename):
         if file_extension == '.csv':
             reader = csv.DictReader(open(filename))
             for row in reader:
-                process_bag(name=row['Item Name'], col_id=row['Collection ID'],
+                process_bag(name=row['Item Name'], local_id=row['Local ID'],
+                            col_id=row['Collection ID'],
                             item_type=row['Item Type'], b_type=row['Bag Type'],
                             b_path=row['Bag Path'], mach_id=row['Machine ID'],
                             b_name=row['Bag Name'])
@@ -97,10 +98,10 @@ def import_collection(filename):
                 for curr_row in range(1, sheet.nrows):
                     row_values = sheet.row_values(curr_row)
                     process_bag(col_id=row_values[0], name=row_values[1],
-                                item_type=row_values[2], b_name=row_values[3],
-                                b_path=row_values[4], b_type=row_values[5],
-                                mach_id=str(int(row_values[6])))
-                    print 'Successfully added Bag: ' + row_values[3]
+                                local_id=row_values[2], item_type=row_values[3],
+                                b_name=row_values[4], b_path=row_values[5],
+                                b_type=row_values[6], mach_id=str(int(row_values[7])))
+                    print 'Successfully added Bag: ' + row_values[4]
 
         else:
             print 'Invalid file: ' + filename
