@@ -1,7 +1,7 @@
 
 import logging
 
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.WARNING
 
 # the path to clint instance on remote server
 #CLINT_INSTALLATION_PATH = '/clint/clint/'
