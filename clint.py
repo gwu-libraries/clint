@@ -430,8 +430,8 @@ def validate(args):
     try:
         bag = bagit.Bag(args.path)
         if bag.is_valid():
-            if 'Bag-id' in bag.info:
-                bag_id = bag.info['Bag-id']
+            if 'Bag-Id' in bag.info:
+                bag_id = bag.info['Bag-Id']
                 action = BagAction(bag=bag_id, timestamp=str(datetime.now()),
                                    action='3', note='initiated by clint')
                 action.save()
