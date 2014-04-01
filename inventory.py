@@ -513,6 +513,7 @@ class Item(JSONSerializable):
                     self.__id = self._data['id']
             self.title = self._data['title']
             self.local_id = self._data['local_id']
+            self.notes = self._data['notes']
             self.__created = self._data['created']
             if self._data['collection']:
                 collection_id = '/'.join(
