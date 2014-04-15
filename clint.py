@@ -327,7 +327,7 @@ def bag(args):
         # load path and bagname values
         bagdir, bagname = os.path.split(args.path)
         obj.bagname = bagname
-        obj.path = os.path.abspath(os.path.join(os.getcwd(), bagdir, bagname))
+        obj.absolute_filesystem_path = os.path.abspath(os.path.join(os.getcwd(), bagdir, bagname))
         # try to parse the optional fields
         if args.remainder:
             addb = argparse.ArgumentParser()
@@ -336,7 +336,8 @@ def bag(args):
             addb.add_argument('-t', '--bag_type', choices=bag_types,
                               help='Type of bag')
             addb.add_argument('-p', '--path',
-                              help='Path to bag from server root')
+                              help='Path to bag from server root',
+                              dest='absolute_filesystem_path')
             addb.add_argument('-y', '--payload', help='Payload of the bag')
             addb.add_argument('-m', '--machine',
                               help='Machine this bag is stored on')
@@ -360,7 +361,7 @@ def bag(args):
         if obj.bagname and obj.bagname != bagname:
             newpath = os.path.join(dirname, obj.bagname.replace('/', '_'))
             shutil.move(args.path, newpath)
-            obj.path = newpath
+            obj.absolute_filesystem_path = newpath
         obj.save()
 
         #Change permissions for the 'data' directory inside the bagged folder
@@ -376,7 +377,7 @@ def bag(args):
         action = BagAction(bag=obj.id, timestamp=str(datetime.now()),
                            action='5', note='initiated by clint')
         action.save()
-    except OSError:
+    except OSError, e:
         print 'Bag already exists'
         ans = ''
         while ans.upper() not in ['Y', 'N', 'YES', 'NO']:

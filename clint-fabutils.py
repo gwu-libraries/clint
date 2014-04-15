@@ -19,15 +19,15 @@ BAG_TYPE = {
     }
 
 
-def create_bag(local, base_name, machine_id, item_id, access_path):
-    if not os.path.exists(local):
-        raise IOError("Invalid directory '%s'" % local)
-    if not os.access(local, os.R_OK) and not not os.access(local, os.W_OK):
-        raise IOError("Insufficient permissions '%s'" % local)
+def create_bag(bag_path, bag_name, bag_type, machine_id, item_id):
+    if not os.path.exists(bag_path):
+        raise IOError("Invalid directory '%s'" % bag_path)
+    if not os.access(bag_path, os.R_OK) and not not os.access(bag_path, os.W_OK):
+        raise IOError("Insufficient permissions '%s'" % bag_path)
     with cd(settings.CLINT_INSTALLATION_PATH):
-        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'bag', local,
-                   '-n', base_name,
-                   '-t', 'preservation',
+        bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'bag', bag_path,
+                   '-n', bag_name,
+                   '-t', bag_type,
                    '-m', str(machine_id),
                    '-i', item_id]
         run("source ENV/bin/activate")
@@ -76,6 +76,15 @@ def process_bag(name, local_id, col_id, item_type, b_type, b_path, mach_id, b_na
     register_item(name, local_id, col_id, item_type)
     add_bag(b_name, b_type, b_path, mach_id, item_id)
     validate_bag(b_path)
+
+
+def bag_and_register(item_name, local_id, collection_id, item_type,
+                     bag_name, bag_path, bag_type, machine_id, item_notes='',
+                     item_access_loc=''):
+    global item_id
+    register_item(item_name, local_id, collection_id, item_type)
+    create_bag(bag_path, bag_name, bag_type, machine_id, item_id)
+    validate_bag(bag_path)
 
 
 def import_collection(filename):
