@@ -419,7 +419,7 @@ def rebag(args):
 
 
 def validate(args):
-    """Validates if the Bag is validor not. This function uses the
+    """Validates if the Bag is valid or not. This function uses the
     bagit's 'validate' method to match file checksums. If the folder
     structure of the Bag provided is incorrect, bagit throws an error
     which is handled in the 'except' block. If the checksum validations
