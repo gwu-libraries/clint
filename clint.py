@@ -581,6 +581,7 @@ def main():
     addi.add_argument('-o', '--original-item-type', choices=orig_item_types,
         help='The type of object this digital item came from')
     addi.add_argument('-n', '--notes', help='Notes about the item')
+    addi.add_argument('-a', '--access_loc', help='Public url for the content')
     addi.add_argument('--model', default='item')
     # add bag
     addb = addsubpar.add_parser('bag', help='Add a bag to the Inventory')
@@ -653,6 +654,7 @@ def main():
     editi.add_argument('-o', '--original-item-type', choices=orig_item_types,
         help='The type of object this digital item came from')
     editi.add_argument('-n', '--notes', help='Notes about the item')
+    editi.add_argument('-a', '--access_loc', help='Public url for the content')
     editi.add_argument('--model', default='item')
     # edit bag
     editb = editsubpar.add_parser('bag', help='Edit a bag in the Inventory')
