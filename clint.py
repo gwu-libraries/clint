@@ -124,7 +124,7 @@ def add(args):
                 print '%s recorded!\n' % args.model.title().replace('_', '')
             else:
                 print '%s Created!\n' % args.model.capitalize()
-            print obj.to_string()
+            print obj.to_string().encode('utf8')
 
         #Record an action
         if args.model == 'bag':

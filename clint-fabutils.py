@@ -39,8 +39,8 @@ def register_item(title, base_name, collection_id, item_type):
     with cd(settings.CLINT_INSTALLATION_PATH):
         register_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'add',
                         'item',
-                        '-t', title,
-                        '-l', base_name,
+                        '-t', '"' + title + '"',
+                        '-l', '"' + base_name + '"',
                         '-c', collection_id,
                         '-o', item_type]
         run("source ENV/bin/activate")
