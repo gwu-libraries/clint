@@ -156,7 +156,7 @@ def convert_2_bytes(s):
     symbols = ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
     letter = s[-1:].strip().upper()
     num = s[:-1]
-    assert num.isdigit() and letter in symbols
+    assert isFloat(num) and letter in symbols
     num = float(num)
     prefix = {symbols[0]: 1}
     for i, s in enumerate(symbols[1:]):
@@ -231,3 +231,12 @@ def get_bag_path(bag_id):
         ind2 = item_id.rfind('/', 0, ind1-1)
         item_id = item_id[ind2+1: len(item_id) - 1]
         return (bag_path, bag_type, item_id, bag_name)
+
+
+def isFloat(num):
+    """Function to check if the argument is a floating point number or not."""
+    try:
+        float(num)
+        return True
+    except:
+        return False
