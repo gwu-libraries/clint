@@ -638,8 +638,9 @@ class Bag(JSONSerializable):
     # bagname is readwrite for now because inventory does not autoassign names
     # change this once inventory code has been changed
     __readwrite = ['bagname', 'bag_type', 'absolute_filesystem_path',
-                   'payload', 'machine', 'item', 'created']
-    __relations = ['machine', 'item']
+                   'payload', 'machine', 'item', 'created', 'parent_bag',
+                   'is_deleted']
+    __relations = ['machine', 'item', 'parent_bag']
     __options = {
         'bag_type': {
             '1': 'Access',
@@ -650,7 +651,7 @@ class Bag(JSONSerializable):
 
     def __init__(self, id=None, bagname=None, created=None, item=None,
                  machine=None, absolute_filesystem_path='', bag_type='',
-                 payload=''):
+                 payload='', parent_bag=None, is_deleted=False):
         self.__loaded = False
         self.__id = id
         self.bagname = bagname
@@ -660,16 +661,23 @@ class Bag(JSONSerializable):
         self.payload = payload
         self.machine = machine
         self.item = item
+        self.parent_bag = parent_bag
+        self.is_deleted = is_deleted
 
     def __str__(self):
         return '<Bag %s - %s>' % (str(self.__id), self.bagname)
 
     def __setattr__(self, key, value):
-        if key in self.__relations \
-                and (isinstance(value, str) or isinstance(value, unicode)):
-            obj = globals()[key.capitalize()](id=value)
-            obj._load_properties()
-            value = obj
+        if key in self.__relations:
+            if value == '':
+                value = None
+            elif (isinstance(value, str) or isinstance(value, unicode)):
+                if key == 'parent_bag':
+                    obj = globals()['Bag'](id=value)
+                else:
+                    obj = globals()[key.capitalize()](id=value)
+                    obj._load_properties()
+                    value = obj
         elif key in self.options().keys() \
                 and value in self.options(field=key).values():
             value = self.options(field=key, value=value)
@@ -701,6 +709,8 @@ class Bag(JSONSerializable):
             self.machine = machine_id
             self.absolute_filesystem_path = self._data['absolute_filesystem_path']
             self.payload = self._data['payload']
+            self.parent_bag = self._data['parent_bag']
+            self.is_deleted = self._data['is_deleted']
             self.__resource_uri = self._data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
@@ -718,7 +728,10 @@ class Bag(JSONSerializable):
         if not self.__loaded:
             for field in self.__class__.__readwrite:
                 if field in self.__relations:
-                    data[field] = getattr(self, field).resource_uri
+                    try:
+                        data[field] = getattr(self, field).resource_uri
+                    except AttributeError:
+                        data[field] = None
                 else:
                     data[field] = getattr(self, field)
             response = _post('bag', **data)
@@ -786,6 +799,8 @@ class Bag(JSONSerializable):
         lines.append('%s: %s' % ('machine'.rjust(8), self.machine))
         lines.append('%s: %s' % ('absolute_filesystem_path'.rjust(8),
                                  self.absolute_filesystem_path))
+        lines.append('%s: %s' % ('parent_bag'.rjust(8), self.parent_bag))
+        lines.append('%s: %s' % ('is_deleted'.rjust(8), self.is_deleted))
         #lines.append('%s: %s' % ('payload'.rjust(11), self.__payload))
         return '\n'.join(lines)
 

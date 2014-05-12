@@ -44,7 +44,7 @@ models = ['machine', 'collection', 'project', 'item', 'bag', 'bag_action']
 orig_item_types = ['book', 'microfilm', 'audio', 'video', 'mixed',
                    'other']
 bag_types = ['Access', 'Preservation', 'Export']
-actions = ['updated', 'moved', 'validated', 'imported to DSpace', 'added']
+actions = ['updated', 'moved', 'validated', 'imported to DSpace', 'added', 'deleted']
 
 
 def ls(args):
@@ -278,6 +278,8 @@ def bag(args):
                           help='Item this bag is associated with')
         addb.add_argument('-c', '--created',
                           help='Timestamp when this bag was created')
+        addb.add_argument('-b', '--parent_bag', help='Parent Bag ID')
+        addb.add_argument('-d', '--is_deleted', help='Mark Bag as deleted')
         addb.add_argument('--model', default='bag')
         addb.add_argument('--force',
                           help='Forcefully bag an existing bag path',
@@ -344,6 +346,8 @@ def bag(args):
                               help='Item this bag is associated with')
             addb.add_argument('-c', '--created',
                               help='Timestamp when this bag was created')
+            addb.add_argument('-b', '--parent_bag', help='Parent Bag ID')
+            addb.add_argument('-d', '--is_deleted', help='Mark Bag as deleted')
             addb.add_argument('--model', default='bag')
             addb.set_defaults(func=add)
             addbargs = addb.parse_args(args.remainder)
@@ -594,6 +598,8 @@ def main():
     addb.add_argument('-i', '--item', help='Item this bag is associated with')
     addb.add_argument('-c', '--created',
         help='Timestamp when this bag was created')
+    addb.add_argument('-b', '--parent_bag', help='Parent Bag ID')
+    addb.add_argument('-d', '--is_deleted', help='Mark Bag as deleted')
     addb.add_argument('--force', help='Forcefully bag an existing bag path', action='store_true')
     addb.add_argument('-a', '--params', help='Additional params for Bagit info file.')
     addb.add_argument('--model', default='bag')
@@ -667,6 +673,8 @@ def main():
     editb.add_argument('-i', '--item', help='Item this bag is associated with')
     editb.add_argument('-c', '--created',
         help='Timestamp when this bag was created')
+    editb.add_argument('-b', '--parent_bag', help='Parent Bag ID')
+    editb.add_argument('-d', '--is_deleted', help='Mark Bag as deleted')
     editb.add_argument('--model', default='bag')
     # edit machine
     editm = editsubpar.add_parser('machine',
