@@ -6,6 +6,7 @@ from fabric.api import run, quiet, env, cd
 import settings
 import json
 import csv
+import bagit
 
 from xlrd import open_workbook
 
@@ -94,18 +95,42 @@ def bag_and_register(item_name, local_id, collection_id, item_type,
     validate_bag(bag_path)
 
 
+def verify_path_is_bag(bag_path):
+    try:
+        bag = bagit.Bag(bag_path)
+        return True
+    except:
+        return False
+
+
 def import_collection(filename):
     try:
+        item_name = local_id = collection_id = item_type = bag_type = \
+            bag_path = machine_id = bag_name = item_notes = \
+            item_access_loc = ''
         file_extension = os.path.splitext(filename)[1]
         if file_extension == '.csv':
             reader = csv.DictReader(open(filename))
             for row in reader:
-                process_bag(name=row['Item Name'], local_id=row['Local ID'],
-                            col_id=row['Collection ID'],
-                            item_type=row['Item Type'], b_type=row['Bag Type'],
-                            b_path=row['Bag Path'], mach_id=row['Machine ID'],
-                            b_name=row['Bag Name'], item_notes=row['Item Notes'],
-                            item_access_loc=row['Item Access Location'])
+                collection_id = row['Collection ID']
+                item_name = row['Item Name']
+                local_id = row['Local ID']
+                item_type = row['Item Type']
+                item_notes = row['Item Notes']
+                item_access_loc = row['Item Access Location']
+                bag_name = row['Bag Name']
+                bag_path = row['Bag Path']
+                bag_type = row['Bag Type']
+                machine_id = row['Machine ID']
+                if(verify_path_is_bag(bag_path)):
+                    process_bag(name=item_name, local_id=local_id,
+                                col_id=collection_id, item_type=item_type,
+                                b_type=bag_type, b_path=bag_path,
+                                mach_id=machine_id, b_name=bag_name)
+                else:
+                    bag_and_register(item_name, local_id, collection_id, item_type,
+                                     bag_name, bag_path, bag_type, machine_id,
+                                     item_notes, item_access_loc)
                 print 'Successfully added Bag: ' + row['Bag Name']
 
         elif file_extension in ['.xls', '.xlsx']:
@@ -114,15 +139,26 @@ def import_collection(filename):
                 sheet = excel_file.sheet_by_name(sheet_name)
                 for curr_row in range(1, sheet.nrows):
                     row_values = sheet.row_values(curr_row)
-                    process_bag(col_id=row_values[0], name=row_values[1],
-                                local_id=row_values[2], item_type=row_values[3],
-                                item_notes=row_values[4],
-                                item_access_loc=row_values[5],
-                                b_name=row_values[6], b_path=row_values[7],
-                                b_type=row_values[8],
-                                mach_id=str(int(row_values[9])))
-                    print 'Successfully added Bag: ' + row_values[6]
-
+                    collection_id = row_values[0]
+                    item_name = row_values[1]
+                    local_id = row_values[2]
+                    item_type = row_values[3]
+                    item_notes = row_values[4]
+                    item_access_loc = row_values[5]
+                    bag_name = row_values[6]
+                    bag_path = row_values[7]
+                    bag_type = row_values[8]
+                    machine_id = row_values[9]
+                    if(verify_path_is_bag(bag_path)):
+                        process_bag(name=item_name, local_id=local_id,
+                                    col_id=collection_id, item_type=item_type,
+                                    b_type=bag_type, b_path=bag_path,
+                                    mach_id=machine_id, b_name=bag_name)
+                    else:
+                        bag_and_register(item_name, local_id, collection_id, item_type,
+                                         bag_name, bag_path, bag_type, machine_id, item_notes,
+                                         item_access_loc)
+                    print 'Successfully added Bag: ' + bag_name
         else:
             print 'Invalid file: ' + filename
     except Exception, e:
