@@ -34,15 +34,22 @@ def create_bag(bag_path, bag_name, bag_type, machine_id, item_id):
         run(" ".join(bag_cmd))
 
 
-def register_item(title, base_name, collection_id, item_type):
+def register_item(title, base_name, collection_id, item_type, notes='', access_loc=''):
     global item_id
     with cd(settings.CLINT_INSTALLATION_PATH):
         register_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'add',
                         'item',
-                        '-t', title,
-                        '-l', base_name,
+                        '-t', '"' + title + '"',
+                        '-l', '"' + base_name + '"',
                         '-c', collection_id,
                         '-o', item_type]
+        if notes:
+            register_cmd.append('-n')
+            register_cmd.append("'" + notes + "'")
+        if access_loc:
+            register_cmd.append('-a')
+            register_cmd.append("'" + access_loc + "'")
+
         run("source ENV/bin/activate")
         result = run(" ".join(register_cmd))
         index = result.find('id:')
@@ -71,9 +78,9 @@ def validate_bag(bag_path):
         run(" ".join(bag_cmd))
 
 
-def process_bag(name, local_id, col_id, item_type, b_type, b_path, mach_id, b_name):
+def process_bag(name, local_id, col_id, item_type, b_type, b_path, mach_id, b_name, item_notes='', item_access_loc=''):
     global item_id
-    register_item(name, local_id, col_id, item_type)
+    register_item(name, local_id, col_id, item_type, item_notes, item_access_loc)
     add_bag(b_name, b_type, b_path, mach_id, item_id)
     validate_bag(b_path)
 
@@ -97,7 +104,8 @@ def import_collection(filename):
                             col_id=row['Collection ID'],
                             item_type=row['Item Type'], b_type=row['Bag Type'],
                             b_path=row['Bag Path'], mach_id=row['Machine ID'],
-                            b_name=row['Bag Name'])
+                            b_name=row['Bag Name'], item_notes=row['Item Notes'],
+                            item_access_loc=row['Item Access Location'])
                 print 'Successfully added Bag: ' + row['Bag Name']
 
         elif file_extension in ['.xls', '.xlsx']:
@@ -108,9 +116,12 @@ def import_collection(filename):
                     row_values = sheet.row_values(curr_row)
                     process_bag(col_id=row_values[0], name=row_values[1],
                                 local_id=row_values[2], item_type=row_values[3],
-                                b_name=row_values[4], b_path=row_values[5],
-                                b_type=row_values[6], mach_id=str(int(row_values[7])))
-                    print 'Successfully added Bag: ' + row_values[4]
+                                item_notes=row_values[4],
+                                item_access_loc=row_values[5],
+                                b_name=row_values[6], b_path=row_values[7],
+                                b_type=row_values[8],
+                                mach_id=str(int(row_values[9])))
+                    print 'Successfully added Bag: ' + row_values[6]
 
         else:
             print 'Invalid file: ' + filename
@@ -154,7 +165,7 @@ def convert_2_bytes(s):
     symbols = ('B', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
     letter = s[-1:].strip().upper()
     num = s[:-1]
-    assert num.isdigit() and letter in symbols
+    assert isFloat(num) and letter in symbols
     num = float(num)
     prefix = {symbols[0]: 1}
     for i, s in enumerate(symbols[1:]):
@@ -229,3 +240,12 @@ def get_bag_path(bag_id):
         ind2 = item_id.rfind('/', 0, ind1-1)
         item_id = item_id[ind2+1: len(item_id) - 1]
         return (bag_path, bag_type, item_id, bag_name)
+
+
+def isFloat(num):
+    """Function to check if the argument is a floating point number or not."""
+    try:
+        float(num)
+        return True
+    except:
+        return False

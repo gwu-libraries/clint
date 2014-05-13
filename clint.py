@@ -124,7 +124,7 @@ def add(args):
                 print '%s recorded!\n' % args.model.title().replace('_', '')
             else:
                 print '%s Created!\n' % args.model.capitalize()
-            print obj.to_string()
+            print obj.to_string().encode('utf8')
 
         #Record an action
         if args.model == 'bag':
@@ -420,7 +420,7 @@ def rebag(args):
 
 
 def validate(args):
-    """Validates if the Bag is validor not. This function uses the
+    """Validates if the Bag is valid or not. This function uses the
     bagit's 'validate' method to match file checksums. If the folder
     structure of the Bag provided is incorrect, bagit throws an error
     which is handled in the 'except' block. If the checksum validations
@@ -582,6 +582,7 @@ def main():
     addi.add_argument('-o', '--original-item-type', choices=orig_item_types,
         help='The type of object this digital item came from')
     addi.add_argument('-n', '--notes', help='Notes about the item')
+    addi.add_argument('-a', '--access_loc', help='Public url for the content')
     addi.add_argument('--model', default='item')
     # add bag
     addb = addsubpar.add_parser('bag', help='Add a bag to the Inventory')
@@ -654,6 +655,7 @@ def main():
     editi.add_argument('-o', '--original-item-type', choices=orig_item_types,
         help='The type of object this digital item came from')
     editi.add_argument('-n', '--notes', help='Notes about the item')
+    editi.add_argument('-a', '--access_loc', help='Public url for the content')
     editi.add_argument('--model', default='item')
     # edit bag
     editb = editsubpar.add_parser('bag', help='Edit a bag in the Inventory')
