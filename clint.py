@@ -115,6 +115,12 @@ def add(args):
             bag = bagit.Bag(obj.absolute_filesystem_path)
             obj.payload = build_bag_payload(bag, obj.absolute_filesystem_path)
         obj.save()
+
+        #Add Inventory Bag Id in bag-info.txt
+        if args.model == 'bag':
+            bag.info['Bag-Id'] = str(obj.id)
+            bag.save(manifests=True)
+
         if args.json:
             print json.dumps(obj.as_json, indent=2)
         else:
@@ -366,6 +372,10 @@ def bag(args):
         #Change permissions for the 'data' directory inside the bagged folder
         datapath = os.path.join(obj.absolute_filesystem_path, 'data')
         os.chmod(datapath, 0755)
+
+        #Add Inventory Bag Id in bag-info.txt
+        bag.info["Bag-Id"] = str(obj.id)
+        bag.save(manifests=True)
 
         if args.json:
             print json.dumps(obj.as_json, indent=2)

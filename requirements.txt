@@ -1,4 +1,4 @@
-bagit
+bagit>=1.5.1
 fabric
 requests
 xlrd
