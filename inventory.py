@@ -673,11 +673,11 @@ class Bag(JSONSerializable):
                 value = None
             elif (isinstance(value, str) or isinstance(value, unicode)):
                 if key == 'parent_bag':
-                    obj = globals()['Bag'](id=value)
+                    obj = globals()['bag'.capitalize()](id=value)
                 else:
                     obj = globals()[key.capitalize()](id=value)
-                    obj._load_properties()
-                    value = obj
+                obj._load_properties()
+                value = obj
         elif key in self.options().keys() \
                 and value in self.options(field=key).values():
             value = self.options(field=key, value=value)
@@ -702,15 +702,17 @@ class Bag(JSONSerializable):
             self._data = response.json()
             item_id = '/'.join(self._data['item'].rstrip('/').split('/')[-2:])
             machine_id = '/'.join(self._data['machine'].rstrip('/').split('/')[-1:])
+            if self._data['parent_bag']:
+                parent_bag_id = '/'.join(self._data['parent_bag'].rstrip('/').split('/')[-1:])
+                self.parent_bag = parent_bag_id
             self.bagname = self._data['bagname']
             self.created = self._data['created']
             self.bag_type = self._data['bag_type']
             self.item = item_id
             self.machine = machine_id
+            self.is_deleted = self._data['is_deleted']
             self.absolute_filesystem_path = self._data['absolute_filesystem_path']
             self.payload = self._data['payload']
-            self.parent_bag = self._data['parent_bag']
-            self.is_deleted = self._data['is_deleted']
             self.__resource_uri = self._data['resource_uri']
             self.__loaded = True
         elif response.status_code == 404:
@@ -744,7 +746,8 @@ class Bag(JSONSerializable):
         elif self.__loaded:
             for field in vars(self):
                 if field in self.__relations:
-                    data[field] = getattr(self, field).resource_uri
+                    relobj = getattr(self, field)
+                    data[field] = relobj.resource_uri if relobj else None
                 else:
                     data[field] = getattr(self, field)
             response = _put('bag', self.id, **data)
