@@ -717,16 +717,16 @@ def main():
     valid_parser = subparsers.add_parser('validate', help='Validate a bag')
     valid_parser.add_argument('path', help='Relative path to the bag')
     valid_parser.set_defaults(func=validate)
-
-    copy_parser = subparsers.add_parser('copy', help='Copy a bag')
-    copy_parser.add_argument('source', help='Relative path to the source bag')
-    copy_parser.add_argument('target', help='Relative path to the target bag')
-    copy_parser.set_defaults(func=copy)
-
-    move_parser = subparsers.add_parser('move', help='Move a bag')
-    move_parser.add_argument('source', help='Relative path to the source bag')
-    move_parser.add_argument('target', help='Relative path to the target bag')
-    move_parser.set_defaults(func=move)
+#
+#    copy_parser = subparsers.add_parser('copy', help='Copy a bag')
+#    copy_parser.add_argument('source', help='Relative path to the source bag')
+#    copy_parser.add_argument('target', help='Relative path to the target bag')
+#    copy_parser.set_defaults(func=copy)
+#
+#    move_parser = subparsers.add_parser('move', help='Move a bag')
+#    move_parser.add_argument('source', help='Relative path to the source bag')
+#    move_parser.add_argument('target', help='Relative path to the target bag')
+#    move_parser.set_defaults(func=move)
 
     args = parser.parse_args()
     args.func(args)
