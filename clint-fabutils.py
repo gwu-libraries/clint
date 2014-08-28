@@ -19,7 +19,8 @@ BAG_TYPE = {
     }
 
 
-def create_bag(local, base_name, machine_id, item_id, access_path):
+def create_bag(local, base_name, machine_id, item_id, access_path,
+               parent_bag=None, is_deleted=False):
     if not os.path.exists(local):
         raise IOError("Invalid directory '%s'" % local)
     if not os.access(local, os.R_OK) and not not os.access(local, os.W_OK):
@@ -29,12 +30,16 @@ def create_bag(local, base_name, machine_id, item_id, access_path):
                    '-n', base_name,
                    '-t', 'preservation',
                    '-m', str(machine_id),
-                   '-i', item_id]
+                   '-i', item_id,
+                   '-d', str(is_deleted)]
+        if parent_bag:
+            bag_cmd.append('-b ' + str(parent_bag))
         run("source ENV/bin/activate")
         run(" ".join(bag_cmd))
 
 
-def register_item(title, base_name, collection_id, item_type, notes='', access_loc=''):
+def register_item(title, base_name, collection_id, item_type,
+                  notes='', access_loc=''):
     global item_id
     with cd(settings.CLINT_INSTALLATION_PATH):
         register_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'add',
@@ -57,15 +62,19 @@ def register_item(title, base_name, collection_id, item_type, notes='', access_l
         item_id = result[index+4:index2]
 
 
-def add_bag(bag_name, bag_type, bag_path, machine_id, item_id):
+def add_bag(bag_name, bag_type, bag_path, machine_id, item_id,
+            parent_bag=None, is_deleted=False):
     with cd(settings.CLINT_INSTALLATION_PATH):
         bag_cmd = [settings.CLINT_INSTALLATION_PATH + 'clint', 'add', 'bag',
                    '-n', bag_name,
                    '-p', bag_path,
                    '-m', machine_id,
                    '-t', bag_type,
-                   '-i', item_id
+                   '-i', item_id,
+                   '-d', str(is_deleted)
                    ]
+        if parent_bag:
+            bag_cmd.append('-b ' + str(parent_bag))
         run("source ENV/bin/activate")
         run(" ".join(bag_cmd))
 
@@ -200,7 +209,7 @@ def make_copies(mach_id, bag_id, remote_path, remote_drive):
     if bag_type is None:
         bag_type = ''
     copy_bag(bag_path, remote_path, remote_drive)
-    add_bag(bag_name, bag_type, bag_path, mach_id, item_id)
+    add_bag(bag_name, bag_type, bag_path, mach_id, item_id, bag_id)
     validate_bag(remote_path)
 
 
