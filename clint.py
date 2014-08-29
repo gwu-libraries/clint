@@ -357,10 +357,6 @@ def bag(args):
             user_build_new_obj(obj, 'bag')
         # adjust the bagname based on arguments
         dirname, bagname = os.path.split(args.path)
-        if obj.bagname and obj.bagname != bagname:
-            newpath = os.path.join(dirname, obj.bagname.replace('/', '_'))
-            shutil.move(args.path, newpath)
-            obj.path = newpath
         obj.save()
 
         #Change permissions for the 'data' directory inside the bagged folder
