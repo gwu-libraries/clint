@@ -401,7 +401,9 @@ def rebag(args):
     # Ideally, this behavior should be included in the bagit.py package
     # remove bag info and manifest files
     bagpath = args.path
-    bagname = os.path.basename(bagpath)
+    old_bag = bagit.Bag(bagpath)
+    bag_id = old_bag.info['Bag-Id']
+
     for f in os.listdir(bagpath):
         fpath = os.path.join(bagpath, f)
         if os.path.isfile(fpath):
@@ -417,12 +419,12 @@ def rebag(args):
     print 'Bag updated!'
     pprint(bag.entries)
     # also create the inventory object
-    obj = Bag(bagname=bagname)
+    obj = Bag(id=bag_id)
     obj._load_properties()
     # load payload
     obj.payload = build_bag_payload(bag, bagpath)
     obj.save()
-    action = BagAction(bag=bagname, timestamp=str(datetime.now()),
+    action = BagAction(bag=bag_id, timestamp=str(datetime.now()),
                        action='1', note='initiated by clint')
     action.save()
     print 'Action recorded in Inventory'
